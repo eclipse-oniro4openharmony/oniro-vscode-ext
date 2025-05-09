@@ -71,14 +71,11 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	const installDisposable = vscode.commands.registerCommand('oniro-ide.installApp', async () => {
-		const hapPath = await vscode.window.showInputBox({ prompt: 'Enter path to .hap package' });
-		if (hapPath) {
-			try {
-				await installApp(hapPath);
-				vscode.window.showInformationMessage('App installed successfully!');
-			} catch (err) {
-				vscode.window.showErrorMessage(`Failed to install app: ${err}`);
-			}
+		try {
+			await installApp();
+			vscode.window.showInformationMessage('App installed successfully!');
+		} catch (err) {
+			vscode.window.showErrorMessage(`Failed to install app: ${err}`);
 		}
 	});
 

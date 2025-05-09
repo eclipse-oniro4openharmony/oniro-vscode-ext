@@ -10,14 +10,6 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:oniro-ide.helloWorld",
-    "onCommand:oniro-ide.initSdk",
-    "onCommand:oniro-ide.buildAndSign",
-    "onCommand:oniro-ide.startEmulator",
-    "onCommand:oniro-ide.stopEmulator",
-    "onCommand:oniro-ide.connectEmulator",
-    "onCommand:oniro-ide.installApp",
-    "onCommand:oniro-ide.launchApp"
   ],
   "main": "./out/extension.js",
   "contributes": {

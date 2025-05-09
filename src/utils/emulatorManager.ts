@@ -2,8 +2,9 @@ import { exec } from 'child_process';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { oniroLogChannel } from './logger';
 
-const emulatorChannel = vscode.window.createOutputChannel('Emulator Manager');
+const emulatorChannel = oniroLogChannel;
 const PID_FILE = '/tmp/oniro_emulator.pid';
 
 function execPromise(cmd: string): Promise<void> {

@@ -1,12 +1,13 @@
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
+import { oniroLogChannel } from './logger';
 
 const workspaceFolders = vscode.workspace.workspaceFolders;
 const projectDir = workspaceFolders && workspaceFolders.length > 0
   ? workspaceFolders[0].uri.fsPath
   : process.cwd();
 
-const logChannel = vscode.window.createOutputChannel('OniroBuilder');
+const logChannel = oniroLogChannel;
 
 function execPromise(cmd: string): Promise<void> {
   logChannel.appendLine(`[onirobuilder] executing command: ${cmd}`);
