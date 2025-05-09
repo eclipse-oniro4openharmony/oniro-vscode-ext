@@ -6,17 +6,19 @@ const projectDir = workspaceFolders && workspaceFolders.length > 0
   ? workspaceFolders[0].uri.fsPath
   : process.cwd();
 
+const logChannel = vscode.window.createOutputChannel('OniroBuilder');
+
 function execPromise(cmd: string): Promise<void> {
-  console.debug(`[onirobuilder] executing command: ${cmd}`);
+  logChannel.appendLine(`[onirobuilder] executing command: ${cmd}`);
   return new Promise((resolve, reject) => {
     exec(cmd, { cwd: projectDir }, (error, stdout: string, stderr: string) => {
-      console.debug(`[onirobuilder] stdout: ${stdout}`);
-      console.debug(`[onirobuilder] stderr: ${stderr}`);
+      logChannel.appendLine(`[onirobuilder] stdout: ${stdout}`);
+      logChannel.appendLine(`[onirobuilder] stderr: ${stderr}`);
       if (error) {
-        console.error(`[onirobuilder] command failed: ${error.message}`);
+        logChannel.appendLine(`ERROR: [onirobuilder] command failed: ${error.message}`);
         reject(new Error(`Command "${cmd}" failed: ${error.message}\nStdout: ${stdout}\nStderr: ${stderr}`));
       } else {
-        console.debug(`[onirobuilder] command succeeded`);
+        logChannel.appendLine(`[onirobuilder] command succeeded`);
         resolve();
       }
     });
@@ -24,17 +26,17 @@ function execPromise(cmd: string): Promise<void> {
 }
 
 export function onirobuilderInit(version?: string): Promise<void> {
-  console.debug(`[onirobuilder] onirobuilderInit called with version: ${version}`);
+  logChannel.appendLine(`[onirobuilder] onirobuilderInit called with version: ${version}`);
   const sdkFlag = version ? `--sdk-version ${version}` : '';
   return execPromise(`onirobuilder init ${sdkFlag}`);
 }
 
 export function onirobuilderBuild(): Promise<void> {
-  console.debug(`[onirobuilder] onirobuilderBuild called`);
+  logChannel.appendLine(`[onirobuilder] onirobuilderBuild called`);
   return execPromise('onirobuilder build');
 }
 
 export function onirobuilderSign(): Promise<void> {
-  console.debug(`[onirobuilder] onirobuilderSign called`);
+  logChannel.appendLine(`[onirobuilder] onirobuilderSign called`);
   return execPromise('onirobuilder sign');
 }

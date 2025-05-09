@@ -1,12 +1,15 @@
 import { exec } from 'child_process';
+import * as vscode from 'vscode';
+
+const emulatorChannel = vscode.window.createOutputChannel('Emulator Manager');
 
 function execPromise(cmd: string): Promise<void> {
   return new Promise((resolve, reject) => {
     exec(cmd, (error, stdout, stderr) => {
-      if (stdout) console.log(`[emulator] stdout: ${stdout.trim()}`);
-      if (stderr) console.error(`[emulator] stderr: ${stderr.trim()}`);
+      if (stdout) emulatorChannel.appendLine(`[emulator] stdout: ${stdout.trim()}`);
+      if (stderr) emulatorChannel.appendLine(`[emulator] stderr: ${stderr.trim()}`);
       if (error) {
-        console.error(`[emulator] error: ${error.message}`);
+        emulatorChannel.appendLine(`ERROR: [emulator] error: ${error.message}`);
         reject(error);
       } else {
         resolve();

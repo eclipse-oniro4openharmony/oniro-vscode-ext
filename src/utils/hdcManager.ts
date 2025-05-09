@@ -1,12 +1,15 @@
 import { exec } from 'child_process';
+import * as vscode from 'vscode';
+
+const hdcChannel = vscode.window.createOutputChannel('HDC Manager');
 
 function execPromise(cmd: string): Promise<void> {
   return new Promise((resolve, reject) => {
     exec(cmd, (error, stdout, stderr) => {
-      if (stdout) console.log(`[hdc] stdout: ${stdout.trim()}`);
-      if (stderr) console.error(`[hdc] stderr: ${stderr.trim()}`);
+      if (stdout) hdcChannel.appendLine(`[hdc] stdout: ${stdout.trim()}`);
+      if (stderr) hdcChannel.appendLine(`[hdc] stderr: ${stderr.trim()}`);
       if (error) {
-        console.error(`[hdc] error: ${error.message}`);
+        hdcChannel.appendLine(`ERROR: [hdc] error: ${error.message}`);
         reject(error);
       } else {
         resolve();
