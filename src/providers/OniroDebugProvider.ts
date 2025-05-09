@@ -10,13 +10,8 @@ export class OniroDebugProvider implements vscode.DebugConfigurationProvider {
     ): Promise<vscode.DebugConfiguration | undefined> {
         try {
             await installApp();
-            const bundleName = debugConfig.bundleName;
-            if (!bundleName) {
-                vscode.window.showErrorMessage('oniro-debug: bundleName missing in launch configuration');
-                return undefined;
-            }
-            await launchApp(bundleName);
-            vscode.window.showInformationMessage(`App ${bundleName} installed and launched.`);
+            await launchApp();
+            vscode.window.showInformationMessage(`App installed and launched.`);
         } catch (err) {
             vscode.window.showErrorMessage(`oniro-debug failed: ${err}`);
             return undefined;

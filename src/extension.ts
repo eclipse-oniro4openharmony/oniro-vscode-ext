@@ -80,14 +80,11 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	const launchDisposable = vscode.commands.registerCommand('oniro-ide.launchApp', async () => {
-		const bundleName = await vscode.window.showInputBox({ prompt: 'Enter application bundle name' });
-		if (bundleName) {
-			try {
-				await launchApp(bundleName);
-				vscode.window.showInformationMessage('App launched successfully!');
-			} catch (err) {
-				vscode.window.showErrorMessage(`Failed to launch app: ${err}`);
-			}
+		try {
+			await launchApp();
+			vscode.window.showInformationMessage('App launched successfully!');
+		} catch (err) {
+			vscode.window.showErrorMessage(`Failed to launch app: ${err}`);
 		}
 	});
 

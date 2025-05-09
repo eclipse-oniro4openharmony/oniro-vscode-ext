@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { oniroLogChannel } from './logger';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as util from 'util';
 
 const hdcChannel = oniroLogChannel;
 
@@ -19,6 +20,45 @@ function execPromise(cmd: string): Promise<void> {
       }
     });
   });
+}
+
+/**
+ * Helper to read JSON5 files (since app.json5/module.json5 are JSON5, not strict JSON)
+ */
+function readJson5File<T>(filePath: string): T {
+  const json5 = require('json5');
+  const content = fs.readFileSync(filePath, 'utf-8');
+  return json5.parse(content);
+}
+
+/**
+ * Automatically determines the bundleName from AppScope/app.json5
+ */
+function getBundleName(projectDir: string): string {
+  const appJsonPath = path.join(projectDir, 'AppScope', 'app.json5');
+  if (!fs.existsSync(appJsonPath)) {
+    throw new Error(`Could not find app.json5 at ${appJsonPath}`);
+  }
+  const appJson = readJson5File<{ app: { bundleName: string } }>(appJsonPath);
+  if (!appJson.app?.bundleName) {
+    throw new Error('bundleName not found in app.json5');
+  }
+  return appJson.app.bundleName;
+}
+
+/**
+ * Automatically determines the main ability from entry/src/main/module.json5
+ */
+function getMainAbility(projectDir: string): string {
+  const moduleJsonPath = path.join(projectDir, 'entry', 'src', 'main', 'module.json5');
+  if (!fs.existsSync(moduleJsonPath)) {
+    throw new Error(`Could not find module.json5 at ${moduleJsonPath}`);
+  }
+  const moduleJson = readJson5File<{ module: { mainElement: string } }>(moduleJsonPath);
+  if (!moduleJson.module?.mainElement) {
+    throw new Error('mainElement not found in module.json5');
+  }
+  return moduleJson.module.mainElement;
 }
 
 /**
@@ -48,7 +88,15 @@ export async function installApp(): Promise<void> {
 
 /**
  * Launch an installed bundle on device/emulator via HDC
+ * Automatically determines bundleName and main ability from project files
  */
-export function launchApp(bundleName: string): Promise<void> {
-  return execPromise(`hdc shell aa start -a EntryAbility -b ${bundleName}`);
+export async function launchApp(): Promise<void> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    throw new Error('No workspace folder found.');
+  }
+  const projectDir = workspaceFolders[0].uri.fsPath;
+  const bundleName = getBundleName(projectDir);
+  const mainAbility = getMainAbility(projectDir);
+  return execPromise(`hdc shell aa start -a ${mainAbility} -b ${bundleName}`);
 }
