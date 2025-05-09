@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { onirobuilderInit, onirobuilderBuild, onirobuilderSign } from './utils/onirobuilder';
-import { startEmulator, stopEmulator } from './utils/emulatorManager';
+import { startEmulator, stopEmulator, connectEmulator } from './utils/emulatorManager';
 import { installApp, launchApp } from './utils/hdcManager';
 import { OniroTaskProvider } from './providers/OniroTaskProvider';
 import { OniroDebugProvider } from './providers/OniroDebugProvider';
@@ -35,8 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const buildSignDisposable = vscode.commands.registerCommand('oniro-ide.buildAndSign', async () => {
 		try {
-			await onirobuilderBuild();
 			await onirobuilderSign();
+			await onirobuilderBuild();
 			vscode.window.showInformationMessage('Build and signing completed!');
 		} catch (err) {
 			vscode.window.showErrorMessage(`Build or signing failed: ${err}`);
@@ -58,6 +58,15 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage('Emulator stopped successfully!');
 		} catch (err) {
 			vscode.window.showErrorMessage(`Failed to stop emulator: ${err}`);
+		}
+	});
+
+	const connectEmulatorDisposable = vscode.commands.registerCommand('oniro-ide.connectEmulator', async () => {
+		try {
+			await connectEmulator();
+			vscode.window.showInformationMessage('Emulator connected successfully!');
+		} catch (err) {
+			vscode.window.showErrorMessage(`Failed to connect emulator: ${err}`);
 		}
 	});
 
@@ -93,7 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const oniDebug = vscode.debug.registerDebugConfigurationProvider('oniro-debug', new OniroDebugProvider());
 	context.subscriptions.push(oniDebug);
 
-	context.subscriptions.push(disposable, initDisposable, buildSignDisposable, startEmulatorDisposable, stopEmulatorDisposable, installDisposable, launchDisposable);
+	context.subscriptions.push(disposable, initDisposable, buildSignDisposable, startEmulatorDisposable, stopEmulatorDisposable, connectEmulatorDisposable, installDisposable, launchDisposable);
 }
 
 // This method is called when your extension is deactivated

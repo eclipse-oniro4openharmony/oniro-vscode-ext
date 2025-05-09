@@ -2,9 +2,15 @@ import { exec } from 'child_process';
 
 function execPromise(cmd: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    exec(cmd, (error) => {
-      if (error) reject(error);
-      else resolve();
+    exec(cmd, (error, stdout, stderr) => {
+      if (stdout) console.log(`[emulator] stdout: ${stdout.trim()}`);
+      if (stderr) console.error(`[emulator] stderr: ${stderr.trim()}`);
+      if (error) {
+        console.error(`[emulator] error: ${error.message}`);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }
@@ -15,4 +21,8 @@ export function startEmulator(): Promise<void> {
 
 export function stopEmulator(): Promise<void> {
   return execPromise('onirobuilder emulator --stop');
+}
+
+export function connectEmulator(): Promise<void> {
+  return execPromise('hdc start -r && hdc tconn localhost:55555');
 }

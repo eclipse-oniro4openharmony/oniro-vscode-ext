@@ -15,6 +15,7 @@
     "onCommand:oniro-ide.buildAndSign",
     "onCommand:oniro-ide.startEmulator",
     "onCommand:oniro-ide.stopEmulator",
+    "onCommand:oniro-ide.connectEmulator",
     "onCommand:oniro-ide.installApp",
     "onCommand:oniro-ide.launchApp"
   ],
@@ -40,6 +41,10 @@
       {
         "command": "oniro-ide.stopEmulator",
         "title": "Oniro: Stop Emulator"
+      },
+      {
+        "command": "oniro-ide.connectEmulator",
+        "title": "Oniro: Connect Emulator"
       },
       {
         "command": "oniro-ide.installApp",

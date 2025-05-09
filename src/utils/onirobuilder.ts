@@ -1,9 +1,15 @@
 import { exec } from 'child_process';
+import * as vscode from 'vscode';
+
+const workspaceFolders = vscode.workspace.workspaceFolders;
+const projectDir = workspaceFolders && workspaceFolders.length > 0
+  ? workspaceFolders[0].uri.fsPath
+  : process.cwd();
 
 function execPromise(cmd: string): Promise<void> {
   console.debug(`[onirobuilder] executing command: ${cmd}`);
   return new Promise((resolve, reject) => {
-    exec(cmd, (error, stdout: string, stderr: string) => {
+    exec(cmd, { cwd: projectDir }, (error, stdout: string, stderr: string) => {
       console.debug(`[onirobuilder] stdout: ${stdout}`);
       console.debug(`[onirobuilder] stderr: ${stderr}`);
       if (error) {
