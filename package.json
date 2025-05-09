@@ -1,0 +1,112 @@
+{
+  "name": "oniro-ide",
+  "displayName": "Oniro IDE",
+  "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development, streamlining common tasks such as:",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:oniro-ide.helloWorld",
+    "onCommand:oniro-ide.initSdk",
+    "onCommand:oniro-ide.buildAndSign",
+    "onCommand:oniro-ide.startEmulator",
+    "onCommand:oniro-ide.stopEmulator",
+    "onCommand:oniro-ide.installApp",
+    "onCommand:oniro-ide.launchApp"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "oniro-ide.helloWorld",
+        "title": "Hello World"
+      },
+      {
+        "command": "oniro-ide.initSdk",
+        "title": "Oniro: Initialize SDK"
+      },
+      {
+        "command": "oniro-ide.buildAndSign",
+        "title": "Oniro: Build and Sign App"
+      },
+      {
+        "command": "oniro-ide.startEmulator",
+        "title": "Oniro: Start Emulator"
+      },
+      {
+        "command": "oniro-ide.stopEmulator",
+        "title": "Oniro: Stop Emulator"
+      },
+      {
+        "command": "oniro-ide.installApp",
+        "title": "Oniro: Install App"
+      },
+      {
+        "command": "oniro-ide.launchApp",
+        "title": "Oniro: Launch App"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "oniro",
+        "required": ["command"],
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The Oniro tool command to execute"
+          }
+        }
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "oniro-debug",
+        "label": "Oniro Debug",
+        "program": "./out/extension.js",
+        "runtime": "node",
+        "configurationAttributes": {
+          "oniro-debug": {
+            "properties": {
+              "appPackage": {
+                "type": "string",
+                "description": "Path to the .hap package to debug"
+              }
+            },
+            "required": ["appPackage"]
+          }
+        },
+        "initialConfigurations": [
+          {
+            "name": "Launch Oniro App",
+            "type": "oniro-debug",
+            "request": "launch",
+            "appPackage": "${workspaceFolder}/build/YourApp.hap"
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.100.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "typescript": "^5.8.3",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
