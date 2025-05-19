@@ -6,8 +6,8 @@
 	<title>Oniro HiLog Viewer</title>
 	<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
-	<div class="p-4 flex flex-col gap-4">
+<body class="bg-gray-900 text-gray-100 min-h-screen h-screen flex flex-col">
+	<div class="p-4 flex flex-col gap-4 h-full">
 		<div class="flex gap-2 items-end flex-wrap">
 			<div>
 				<label class="block text-sm font-medium mb-1" for="processId">Process ID</label>
@@ -25,9 +25,15 @@
 			<button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded ml-4">Start</button>
 			<button id="stopBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded ml-2">Stop</button>
 		</div>
-		<div class="overflow-x-auto">
+			<!-- "Scroll to Latest" button, hidden by default -->
+		<button id="scrollLatestBtn"
+			class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded self-end mb-2 z-20"
+			type="button">
+			Scroll to Latest
+		</button>
+		<div id="logTableContainer" class="overflow-x-auto flex-1 min-h-0" style="overflow-y: auto;">
 			<table class="min-w-full text-xs border-separate border-spacing-y-1" id="logTable">
-				<thead>
+				<thead class="sticky top-0 bg-gray-800 z-10">
 					<tr class="bg-gray-800">
 						<th class="px-2 py-1 text-left">Time</th>
 						<th class="px-2 py-1 text-left">PID</th>
@@ -85,6 +91,30 @@
 		}
 	}
 
+	let stickToLatest = true;
+	const logTableContainer = document.getElementById('logTableContainer');
+	const scrollLatestBtn = document.getElementById('scrollLatestBtn');
+
+	function isScrolledToBottom() {
+		return logTableContainer.scrollHeight - logTableContainer.scrollTop - logTableContainer.clientHeight < 5;
+	}
+
+	logTableContainer.addEventListener('scroll', () => {
+		if (isScrolledToBottom()) {
+			stickToLatest = true;
+			scrollLatestBtn.classList.add('hidden');
+		} else {
+			stickToLatest = false;
+			scrollLatestBtn.classList.remove('hidden');
+		}
+	});
+
+	scrollLatestBtn.onclick = () => {
+		logTableContainer.scrollTop = logTableContainer.scrollHeight;
+		stickToLatest = true;
+		scrollLatestBtn.classList.add('hidden');
+	};
+
 	window.addEventListener('message', event => {
 		const msg = event.data;
 		if (msg.command === 'log') {
@@ -102,13 +132,18 @@
 				`<td class="px-2 py-1">${parsed.message}</td>`
 			].join('');
 			logTableBody.appendChild(tr);
-			logTableBody.parentElement.scrollTop = logTableBody.parentElement.scrollHeight;
+			if (stickToLatest) {
+				logTableContainer.scrollTop = logTableContainer.scrollHeight;
+			}
 		}
 		if (msg.command === 'error') {
 			const logTableBody = document.getElementById('logTableBody');
 			const tr = document.createElement('tr');
 			tr.innerHTML = `<td colspan="6" class="text-red-600">[ERROR] ${msg.line}</td>`;
 			logTableBody.appendChild(tr);
+			if (stickToLatest) {
+				logTableContainer.scrollTop = logTableContainer.scrollHeight;
+			}
 		}
 	});
 	</script>
