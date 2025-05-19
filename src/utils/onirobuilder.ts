@@ -1,6 +1,9 @@
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
 import { oniroLogChannel } from './logger';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as json5 from 'json5';
 
 const workspaceFolders = vscode.workspace.workspaceFolders;
 const projectDir = workspaceFolders && workspaceFolders.length > 0
@@ -32,8 +35,37 @@ export function onirobuilderInit(version?: string): Promise<void> {
   return execPromise(`onirobuilder init ${sdkFlag}`);
 }
 
-export function onirobuilderBuild(): Promise<void> {
+export async function onirobuilderBuild(): Promise<void> {
   logChannel.appendLine(`[onirobuilder] onirobuilderBuild called`);
+  // Check build-profile.json5 for signingConfigs
+  const buildProfilePath = path.join(projectDir, 'build-profile.json5');
+  if (fs.existsSync(buildProfilePath)) {
+    try {
+      const content = fs.readFileSync(buildProfilePath, 'utf8');
+      const profile = json5.parse(content);
+      if (
+        !profile?.app?.signingConfigs ||
+        !Array.isArray(profile.app.signingConfigs) ||
+        profile.app.signingConfigs.length === 0
+      ) {
+        vscode.window.showWarningMessage(
+          'No signing configs found in build-profile.json5. Please generate them first using the Oniro: Sign App command.'
+        );
+        throw new Error('Missing signing configs in build-profile.json5');
+      }
+    } catch (err) {
+      logChannel.appendLine(`[onirobuilder] Error reading/parsing build-profile.json5: ${err}`);
+      vscode.window.showWarningMessage(
+        'Could not read or parse build-profile.json5. Please ensure it exists and is valid, and generate signing configs if needed.'
+      );
+      throw err;
+    }
+  } else {
+    vscode.window.showWarningMessage(
+      'build-profile.json5 not found. Please generate signing configs first using the Oniro: Sign App command.'
+    );
+    throw new Error('build-profile.json5 not found');
+  }
   return execPromise('onirobuilder build');
 }
 
