@@ -97,10 +97,7 @@
 	document.getElementById('startBtn').onclick = () => {
 		const processId = document.getElementById('processId').value.trim();
 		const severity = document.getElementById('severitySelect').value;
-		if (!processId) {
-			alert('Please enter a process ID');
-			return;
-		}
+		// Allow empty processId to get system logs
 		document.getElementById('logTableBody').innerHTML = '';
 		vscode.postMessage({ command: 'startLog', processId, severity });
 		running = true;
@@ -179,6 +176,7 @@
 	const logBuffer = [];
 	const errorBuffer = [];
 	const FLUSH_INTERVAL = 50; // ms
+	const LOG_ROW_LIMIT = 2000; // Maximum number of log rows to keep
 
 	function flushLogBuffer() {
 		const logTableBody = document.getElementById('logTableBody');
@@ -201,6 +199,11 @@
 			logTableBody.appendChild(fragment);
 			logBuffer.length = 0;
 			scrolled = true;
+
+			// Remove oldest rows if over limit
+			while (logTableBody.rows.length > LOG_ROW_LIMIT) {
+				logTableBody.deleteRow(0);
+			}
 		}
 		if (errorBuffer.length > 0) {
 			const fragment = document.createDocumentFragment();
@@ -212,6 +215,11 @@
 			logTableBody.appendChild(fragment);
 			errorBuffer.length = 0;
 			scrolled = true;
+
+			// Remove oldest rows if over limit (errors count as rows)
+			while (logTableBody.rows.length > LOG_ROW_LIMIT) {
+				logTableBody.deleteRow(0);
+			}
 		}
 		if (scrolled && stickToLatest) {
 			logTableContainer.scrollTop = logTableContainer.scrollHeight;

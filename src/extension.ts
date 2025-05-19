@@ -132,7 +132,6 @@ export function activate(context: vscode.ExtensionContext) {
 				let pid: string;
 				try {
 					pid = await findAppProcessId(projectDir);
-					oniroLogChannel.appendLine('[Oniro RunAll] Found app process id: ' + pid);
 				} catch (err) {
 					oniroLogChannel.appendLine('[Oniro RunAll] ' + err);
 					throw err;

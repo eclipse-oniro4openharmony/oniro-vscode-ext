@@ -41,7 +41,11 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 						setLevel.on('error', reject);
 					});
 					// Then start log process
-					hdcProcess = spawn('hdc', ['shell', 'hilog', '-P', processId]);
+					let hilogArgs = ['shell', 'hilog'];
+					if (processId && processId.trim() !== '') {
+						hilogArgs.push('-P', processId);
+					}
+					hdcProcess = spawn('hdc', hilogArgs);
 					if (hdcProcess) {
 						hdcProcess.stdout.on('data', (data: Buffer) => {
 							const lines = data.toString().split('\n').filter(Boolean);
