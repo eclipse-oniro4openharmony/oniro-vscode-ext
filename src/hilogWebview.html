@@ -8,30 +8,35 @@
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen h-screen flex flex-col">
 	<div class="p-4 flex flex-col gap-4 h-full">
-		<div class="flex gap-2 items-end flex-wrap">
-			<div>
-				<label class="block text-sm font-medium mb-1" for="processId">Process ID</label>
-				<input id="processId" type="text" class="rounded px-2 py-1 text-black" placeholder="e.g. 1234" />
+		<div class="flex gap-2 flex-wrap items-end">
+			<div class="flex gap-2 flex-wrap">
+				<div>
+					<label class="block text-sm font-medium mb-1" for="processId">Process ID</label>
+					<input id="processId" type="text" class="rounded px-2 py-1 text-black" placeholder="e.g. 1234" />
+				</div>
+				<div>
+					<label class="block text-sm font-medium mb-1">Severity</label>
+					<select id="severitySelect" class="rounded px-2 py-1 text-black">
+						<option value="DEBUG">Debug</option>
+						<option value="INFO" selected>Info</option>
+						<option value="WARN">Warning</option>
+						<option value="ERROR">Error</option>
+						<option value="FATAL">Fatal</option>
+					</select>
+				</div>
 			</div>
-			<div>
-				<label class="block text-sm font-medium mb-1">Severity</label>
-				<select id="severitySelect" class="rounded px-2 py-1 text-black">
-					<option value="DEBUG">Debug</option>
-					<option value="INFO" selected>Info</option>
-					<option value="WARN">Warning</option>
-					<option value="ERROR">Error</option>
-					<option value="FATAL">Fatal</option>
-				</select>
+			<div class="flex gap-2 items-end ml-4">
+				<button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Start</button>
+				<button id="stopBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Stop</button>
+				<!-- "Scroll to Latest" button, hidden by default -->
+				<button id="scrollLatestBtn"
+					class="hidden bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded z-20"
+					type="button">
+					Scroll to Latest
+				</button>
 			</div>
-			<button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded ml-4">Start</button>
-			<button id="stopBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded ml-2">Stop</button>
 		</div>
-			<!-- "Scroll to Latest" button, hidden by default -->
-		<button id="scrollLatestBtn"
-			class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded self-end mb-2 z-20"
-			type="button">
-			Scroll to Latest
-		</button>
+
 		<div id="logTableContainer" class="overflow-x-auto flex-1 min-h-0" style="overflow-y: auto;">
 			<table class="min-w-full text-xs border-separate border-spacing-y-1" id="logTable">
 				<thead class="sticky top-0 bg-gray-800 z-10">
@@ -138,6 +143,50 @@
 		scrollLatestBtn.classList.add('hidden');
 	};
 
+	// --- Batching logic ---
+	const logBuffer = [];
+	const errorBuffer = [];
+	const FLUSH_INTERVAL = 50; // ms
+
+	function flushLogBuffer() {
+		const logTableBody = document.getElementById('logTableBody');
+		let scrolled = false;
+		if (logBuffer.length > 0) {
+			const fragment = document.createDocumentFragment();
+			for (const parsed of logBuffer) {
+				const tr = document.createElement('tr');
+				tr.className = 'hover:bg-gray-800';
+				tr.innerHTML = [
+					`<td class="px-2 py-1 whitespace-nowrap">${parsed.time}</td>`,
+					`<td class="px-2 py-1 whitespace-nowrap">${parsed.pid}</td>`,
+					`<td class="px-2 py-1 whitespace-nowrap">${parsed.tid}</td>`,
+					`<td class="px-2 py-1 whitespace-nowrap ${levelColor(parsed.level)}">${parsed.level}</td>`,
+					`<td class="px-2 py-1 whitespace-nowrap">${parsed.tag}</td>`,
+					`<td class="px-2 py-1">${parsed.message}</td>`
+				].join('');
+				fragment.appendChild(tr);
+			}
+			logTableBody.appendChild(fragment);
+			logBuffer.length = 0;
+			scrolled = true;
+		}
+		if (errorBuffer.length > 0) {
+			const fragment = document.createDocumentFragment();
+			for (const err of errorBuffer) {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `<td colspan="6" class="text-red-600">[ERROR] ${err}</td>`;
+				fragment.appendChild(tr);
+			}
+			logTableBody.appendChild(fragment);
+			errorBuffer.length = 0;
+			scrolled = true;
+		}
+		if (scrolled && stickToLatest) {
+			logTableContainer.scrollTop = logTableContainer.scrollHeight;
+		}
+	}
+	setInterval(flushLogBuffer, FLUSH_INTERVAL);
+
 	window.addEventListener('message', event => {
 		const msg = event.data;
 		if (msg.command === 'init') {
@@ -155,7 +204,6 @@
 			}
 		}
 		if (msg.command === 'log') {
-			const logTableBody = document.getElementById('logTableBody');
 			const parsed = parseLogLine(msg.line);
 			if (!parsed) return;
 			// Severity filtering
@@ -163,29 +211,12 @@
 			const minLevel = severityOrder[selectedSeverity] || 1;
 			const logLevel = levelMap[parsed.level] || 1;
 			if (logLevel < minLevel) return;
-			const tr = document.createElement('tr');
-			tr.className = 'hover:bg-gray-800';
-			tr.innerHTML = [
-				`<td class="px-2 py-1 whitespace-nowrap">${parsed.time}</td>`,
-				`<td class="px-2 py-1 whitespace-nowrap">${parsed.pid}</td>`,
-				`<td class="px-2 py-1 whitespace-nowrap">${parsed.tid}</td>`,
-				`<td class="px-2 py-1 whitespace-nowrap ${levelColor(parsed.level)}">${parsed.level}</td>`,
-				`<td class="px-2 py-1 whitespace-nowrap">${parsed.tag}</td>`,
-				`<td class="px-2 py-1">${parsed.message}</td>`
-			].join('');
-			logTableBody.appendChild(tr);
-			if (stickToLatest) {
-				logTableContainer.scrollTop = logTableContainer.scrollHeight;
-			}
+			logBuffer.push(parsed);
+			// DOM update is now batched
 		}
 		if (msg.command === 'error') {
-			const logTableBody = document.getElementById('logTableBody');
-			const tr = document.createElement('tr');
-			tr.innerHTML = `<td colspan="6" class="text-red-600">[ERROR] ${msg.line}</td>`;
-			logTableBody.appendChild(tr);
-			if (stickToLatest) {
-				logTableContainer.scrollTop = logTableContainer.scrollHeight;
-			}
+			errorBuffer.push(msg.line);
+			// DOM update is now batched
 		}
 	});
 	</script>
