@@ -33,13 +33,21 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const buildSignDisposable = vscode.commands.registerCommand('oniro-ide.buildAndSign', async () => {
+	const buildDisposable = vscode.commands.registerCommand('oniro-ide.build', async () => {
+		try {
+			await onirobuilderBuild();
+			vscode.window.showInformationMessage('Build completed!');
+		} catch (err) {
+			vscode.window.showErrorMessage(`Build failed: ${err}`);
+		}
+	});
+
+	const signDisposable = vscode.commands.registerCommand('oniro-ide.sign', async () => {
 		try {
 			await onirobuilderSign();
-			await onirobuilderBuild();
-			vscode.window.showInformationMessage('Build and signing completed!');
+			vscode.window.showInformationMessage('Signing completed!');
 		} catch (err) {
-			vscode.window.showErrorMessage(`Build or signing failed: ${err}`);
+			vscode.window.showErrorMessage(`Signing failed: ${err}`);
 		}
 	});
 
@@ -96,7 +104,17 @@ export function activate(context: vscode.ExtensionContext) {
 	const oniDebug = vscode.debug.registerDebugConfigurationProvider('oniro-debug', new OniroDebugProvider());
 	context.subscriptions.push(oniDebug);
 
-	context.subscriptions.push(disposable, initDisposable, buildSignDisposable, startEmulatorDisposable, stopEmulatorDisposable, connectEmulatorDisposable, installDisposable, launchDisposable);
+	context.subscriptions.push(
+		disposable,
+		initDisposable,
+		buildDisposable,
+		signDisposable,
+		startEmulatorDisposable,
+		stopEmulatorDisposable,
+		connectEmulatorDisposable,
+		installDisposable,
+		launchDisposable
+	);
 }
 
 // This method is called when your extension is deactivated

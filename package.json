@@ -22,10 +22,6 @@
         "title": "Oniro: Initialize SDK"
       },
       {
-        "command": "oniro-ide.buildAndSign",
-        "title": "Oniro: Build and Sign App"
-      },
-      {
         "command": "oniro-ide.startEmulator",
         "title": "Oniro: Start Emulator"
       },
@@ -44,6 +40,14 @@
       {
         "command": "oniro-ide.launchApp",
         "title": "Oniro: Launch App"
+      },
+      {
+        "command": "oniro-ide.build",
+        "title": "Oniro: Build App"
+      },
+      {
+        "command": "oniro-ide.sign",
+        "title": "Oniro: Sign App"
       }
     ],
     "taskDefinitions": [
