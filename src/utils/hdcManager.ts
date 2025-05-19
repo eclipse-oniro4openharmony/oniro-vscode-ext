@@ -34,7 +34,7 @@ function readJson5File<T>(filePath: string): T {
 /**
  * Automatically determines the bundleName from AppScope/app.json5
  */
-function getBundleName(projectDir: string): string {
+export function getBundleName(projectDir: string): string {
   const appJsonPath = path.join(projectDir, 'AppScope', 'app.json5');
   if (!fs.existsSync(appJsonPath)) {
     throw new Error(`Could not find app.json5 at ${appJsonPath}`);
@@ -99,4 +99,44 @@ export async function launchApp(): Promise<void> {
   const bundleName = getBundleName(projectDir);
   const mainAbility = getMainAbility(projectDir);
   return execPromise(`hdc shell aa start -a ${mainAbility} -b ${bundleName}`);
+}
+
+/**
+ * Find the process ID (PID) of the running app by bundle name using hdc track-jpid
+ */
+export async function findAppProcessId(projectDir: string): Promise<string> {
+  const bundleName = getBundleName(projectDir);
+  return new Promise<string>((resolve, reject) => {
+    const { spawn } = require('child_process');
+    const proc = spawn('hdc', ['track-jpid']);
+    proc.stdout.on('data', (data: Buffer) => {
+      const lines = data.toString().split('\n').filter(Boolean);
+      for (const line of lines) {
+        const match = line.match(/^(\d+)\s+(.+)$/);
+        if (match) {
+          const pid = match[1];
+          const name = match[2];
+          hdcChannel.appendLine(`[hdcManager] Found process: pid=${pid}, name=${name}`);
+          if (name === bundleName) {
+            hdcChannel.appendLine(`[hdcManager] Found matching process for bundle: ${bundleName} with pid: ${pid}`);
+            proc.kill();
+            resolve(pid);
+            return;
+          }
+        } else {
+          hdcChannel.appendLine(`[hdcManager] No match for line: ${line}`);
+        }
+      }
+    });
+    proc.stderr.on('data', (data: Buffer) => {
+      hdcChannel.appendLine(`[hdcManager] hdc track-jpid stderr: ${data.toString()}`);
+    });
+    proc.on('close', (code: number) => {
+      reject(new Error('Could not find process for bundle: ' + bundleName));
+    });
+    proc.on('error', (err: any) => {
+      hdcChannel.appendLine(`[hdcManager] hdc track-jpid process error: ${err}`);
+      reject(err);
+    });
+  });
 }

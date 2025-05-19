@@ -51,6 +51,12 @@
 	<script>
 	const vscode = acquireVsCodeApi();
 	let running = false;
+
+	// Signal to extension that webview is ready to receive initial data
+	window.addEventListener('DOMContentLoaded', () => {
+		vscode.postMessage({ command: 'webviewReady' });
+	});
+
 	document.getElementById('startBtn').onclick = () => {
 		const processId = document.getElementById('processId').value.trim();
 		const severity = document.getElementById('severitySelect').value;
@@ -134,6 +140,20 @@
 
 	window.addEventListener('message', event => {
 		const msg = event.data;
+		if (msg.command === 'init') {
+			// Set processId and severity if provided, and auto-start log
+			if (msg.processId) {
+				document.getElementById('processId').value = msg.processId;
+			}
+			if (msg.severity) {
+				document.getElementById('severitySelect').value = msg.severity;
+			}
+			if (msg.processId) {
+				document.getElementById('logTableBody').innerHTML = '';
+				vscode.postMessage({ command: 'startLog', processId: msg.processId, severity: msg.severity || 'INFO' });
+				running = true;
+			}
+		}
 		if (msg.command === 'log') {
 			const logTableBody = document.getElementById('logTableBody');
 			const parsed = parseLogLine(msg.line);

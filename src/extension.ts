@@ -5,9 +5,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { onirobuilderInit, onirobuilderBuild, onirobuilderSign } from './utils/onirobuilder';
 import { startEmulator, stopEmulator, connectEmulator } from './utils/emulatorManager';
-import { installApp, launchApp } from './utils/hdcManager';
+import { installApp, launchApp, getBundleName, findAppProcessId } from './utils/hdcManager';
 import { OniroTaskProvider } from './providers/OniroTaskProvider';
 import { OniroDebugProvider } from './providers/OniroDebugProvider';
+import { registerHilogViewerCommand } from './hilogViewer';
+import { oniroLogChannel } from './utils/logger';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -15,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "oniro-ide" is now active!');
+	oniroLogChannel.appendLine('Congratulations, your extension "oniro-ide" is now active!');
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
@@ -116,79 +118,36 @@ export function activate(context: vscode.ExtensionContext) {
 				await installApp();
 				progress.report({ message: 'Launching app...' });
 				await launchApp();
-				vscode.window.showInformationMessage('Oniro: All steps completed successfully!');
+
+				// Find process ID and open HiLog viewer
+				progress.report({ message: 'Detecting app process ID...' });
+				oniroLogChannel.appendLine('[Oniro RunAll] Detecting app process ID...');
+				const workspaceFolders = vscode.workspace.workspaceFolders;
+				if (!workspaceFolders || workspaceFolders.length === 0) {
+					oniroLogChannel.appendLine('[Oniro RunAll] No workspace folder found.');
+					throw new Error('No workspace folder found.');
+				}
+				const projectDir = workspaceFolders[0].uri.fsPath;
+				oniroLogChannel.appendLine('[Oniro RunAll] Project directory: ' + projectDir);
+				let pid: string;
+				try {
+					pid = await findAppProcessId(projectDir);
+					oniroLogChannel.appendLine('[Oniro RunAll] Found app process id: ' + pid);
+				} catch (err) {
+					oniroLogChannel.appendLine('[Oniro RunAll] ' + err);
+					throw err;
+				}
+				// Open HiLog viewer and start logging using the main command, passing processId and severity
+				vscode.commands.executeCommand('oniro-ide.showHilogViewer', { processId: pid, severity: 'INFO' });
+
+				vscode.window.showInformationMessage('Oniro: All steps completed successfully! Logs are now streaming.');
 			} catch (err) {
 				vscode.window.showErrorMessage(`Oniro: Run All failed: ${err}`);
 			}
 		});
 	});
 
-	const showHilogViewerDisposable = vscode.commands.registerCommand('oniro-ide.showHilogViewer', () => {
-		const panel = vscode.window.createWebviewPanel(
-			'oniroHilogViewer',
-			'Oniro HiLog Viewer',
-			vscode.ViewColumn.One,
-			{
-				enableScripts: true
-			}
-		);
-
-		panel.webview.html = getHilogWebviewContent(context);
-
-		let hdcProcess: import('child_process').ChildProcessWithoutNullStreams | undefined;
-
-		panel.webview.onDidReceiveMessage(
-			async message => {
-				if (message.command === 'startLog') {
-					const { processId, severity } = message;
-					if (hdcProcess) {
-						hdcProcess.kill();
-					}
-					const spawn = require('child_process').spawn;
-					// Map UI value to hilog -b argument
-					const severityMap: Record<string, string> = {
-						'DEBUG': 'DEBUG',
-						'INFO': 'INFO',
-						'WARN': 'WARN',
-						'ERROR': 'ERROR',
-						'FATAL': 'FATAL'
-					};
-					const level = severityMap[severity] || 'INFO';
-					// First set the buffer level
-					await new Promise<void>((resolve, reject) => {
-						const setLevel = spawn('hdc', ['shell', 'hilog', '-b', level]);
-						setLevel.on('close', () => resolve());
-						setLevel.on('error', reject);
-					});
-					// Then start log process
-					hdcProcess = spawn('hdc', ['shell', 'hilog', '-P', processId]);
-					if (hdcProcess) {
-						hdcProcess.stdout.on('data', (data: Buffer) => {
-							const lines = data.toString().split('\n').filter(Boolean);
-							for (const line of lines) {
-								panel.webview.postMessage({ command: 'log', line });
-							}
-						});
-						hdcProcess.stderr.on('data', (data: Buffer) => {
-							panel.webview.postMessage({ command: 'error', line: data.toString() });
-						});
-					}
-				}
-				if (message.command === 'stopLog' && hdcProcess) {
-					hdcProcess.kill();
-					hdcProcess = undefined;
-				}
-			},
-			undefined,
-			context.subscriptions
-		);
-
-		panel.onDidDispose(() => {
-			if (hdcProcess) {
-				hdcProcess.kill();
-			}
-		});
-	});
+	registerHilogViewerCommand(context);
 
 	context.subscriptions.push(
 		disposable,
@@ -200,18 +159,8 @@ export function activate(context: vscode.ExtensionContext) {
 		connectEmulatorDisposable,
 		installDisposable,
 		launchDisposable,
-		runAllDisposable,
-		showHilogViewerDisposable
+		runAllDisposable
 	);
-}
-
-function getHilogWebviewContent(context: vscode.ExtensionContext): string {
-	const htmlPath = path.join(context.extensionPath, 'src', 'hilogWebview.html');
-	try {
-		return fs.readFileSync(htmlPath, 'utf8');
-	} catch (err) {
-		return `<html><body><h2>Failed to load HiLog Viewer UI</h2><pre>${err}</pre></body></html>`;
-	}
 }
 
 // This method is called when your extension is deactivated

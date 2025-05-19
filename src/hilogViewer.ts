@@ -1,0 +1,102 @@
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+
+export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
+	const showHilogViewerDisposable = vscode.commands.registerCommand('oniro-ide.showHilogViewer', (args?: { processId?: string, severity?: string }) => {
+		const panel = vscode.window.createWebviewPanel(
+			'oniroHilogViewer',
+			'Oniro HiLog Viewer',
+			vscode.ViewColumn.One,
+			{
+				enableScripts: true
+			}
+		);
+
+		panel.webview.html = getHilogWebviewContent(context);
+
+		let hdcProcess: import('child_process').ChildProcessWithoutNullStreams | undefined;
+
+		panel.webview.onDidReceiveMessage(
+			async message => {
+				if (message.command === 'startLog') {
+					const { processId, severity } = message;
+					if (hdcProcess) {
+						hdcProcess.kill();
+					}
+					const spawn = require('child_process').spawn;
+					// Map UI value to hilog -b argument
+					const severityMap: Record<string, string> = {
+						'DEBUG': 'DEBUG',
+						'INFO': 'INFO',
+						'WARN': 'WARN',
+						'ERROR': 'ERROR',
+						'FATAL': 'FATAL'
+					};
+					const level = severityMap[severity] || 'INFO';
+					// First set the buffer level
+					await new Promise<void>((resolve, reject) => {
+						const setLevel = spawn('hdc', ['shell', 'hilog', '-b', level]);
+						setLevel.on('close', () => resolve());
+						setLevel.on('error', reject);
+					});
+					// Then start log process
+					hdcProcess = spawn('hdc', ['shell', 'hilog', '-P', processId]);
+					if (hdcProcess) {
+						hdcProcess.stdout.on('data', (data: Buffer) => {
+							const lines = data.toString().split('\n').filter(Boolean);
+							for (const line of lines) {
+								panel.webview.postMessage({ command: 'log', line });
+							}
+						});
+						hdcProcess.stderr.on('data', (data: Buffer) => {
+							panel.webview.postMessage({ command: 'error', line: data.toString() });
+						});
+					}
+				}
+				if (message.command === 'stopLog' && hdcProcess) {
+					hdcProcess.kill();
+					hdcProcess = undefined;
+				}
+			},
+			undefined,
+			context.subscriptions
+		);
+
+		// Use webview 'onDidReceiveMessage' only for messages from webview, not for extension->webview
+		// Instead, use 'panel.webview.postMessage' after webview is loaded
+		// Wait for webview to signal it's ready
+		const readyListener = panel.webview.onDidReceiveMessage(
+			message => {
+				if (message.command === 'webviewReady' && (args?.processId || args?.severity)) {
+					panel.webview.postMessage({
+						command: 'init',
+						processId: args?.processId,
+						severity: args?.severity
+					});
+					readyListener.dispose();
+				}
+			},
+			undefined,
+			context.subscriptions
+		);
+
+		panel.onDidDispose(() => {
+			if (hdcProcess) {
+				hdcProcess.kill();
+			}
+		});
+	});
+
+	context.subscriptions.push(showHilogViewerDisposable);
+}
+
+function getHilogWebviewContent(context: vscode.ExtensionContext): string {
+	const htmlPath = path.join(context.extensionPath, 'src', 'hilogWebview.html');
+	try {
+		let html = fs.readFileSync(htmlPath, 'utf8');
+		return html;
+	} catch (err) {
+		return `<html><body><h2>Failed to load HiLog Viewer UI</h2><pre>${err}</pre></body></html>`;
+	}
+}
