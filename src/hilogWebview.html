@@ -5,8 +5,40 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Oniro HiLog Viewer</title>
 	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		:root {
+			--vscode-bg: var(--vscode-editor-background, #1e1e1e);
+			--vscode-fg: var(--vscode-editor-foreground, #d4d4d4);
+			--vscode-table-header: var(--vscode-editorWidget-background, #252526);
+			--vscode-table-row-hover: var(--vscode-list-hoverBackground, #2a2d2e);
+			--vscode-error: var(--vscode-errorForeground, #f14c4c);
+			--vscode-warning: var(--vscode-editorWarning-foreground, #cca700);
+			--vscode-info: var(--vscode-editorInfo-foreground, #3794ff);
+			--vscode-success: var(--vscode-testing-iconPassed, #89d185);
+		}
+		body {
+			background: var(--vscode-bg);
+			color: var(--vscode-fg);
+			min-height: 100vh;
+			height: 100vh;
+			display: flex;
+			flex-direction: column;
+		}
+		#logTable thead {
+			background: var(--vscode-table-header);
+		}
+		#logTable tr:hover {
+			background: var(--vscode-table-row-hover);
+		}
+		.level-error { color: var(--vscode-error); font-weight: bold; }
+		.level-warn { color: var(--vscode-warning); font-weight: bold; }
+		.level-info { color: var(--vscode-info); }
+		.level-debug { color: var(--vscode-success); }
+		.level-default { color: var(--vscode-fg); }
+		.text-red-600 { color: var(--vscode-error) !important; }
+	</style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen h-screen flex flex-col">
+<body>
 	<div class="p-4 flex flex-col gap-4 h-full">
 		<div class="flex gap-2 flex-wrap items-end">
 			<div class="flex gap-2 flex-wrap">
@@ -39,8 +71,8 @@
 
 		<div id="logTableContainer" class="overflow-x-auto flex-1 min-h-0" style="overflow-y: auto;">
 			<table class="min-w-full text-xs border-separate border-spacing-y-1" id="logTable">
-				<thead class="sticky top-0 bg-gray-800 z-10">
-					<tr class="bg-gray-800">
+				<thead class="sticky top-0 z-10">
+					<tr>
 						<th class="px-2 py-1 text-left">Time</th>
 						<th class="px-2 py-1 text-left">PID</th>
 						<th class="px-2 py-1 text-left">TID</th>
@@ -111,11 +143,11 @@
 
 	function levelColor(level) {
 		switch(level) {
-			case 'E': return 'text-red-400 font-bold';
-			case 'W': return 'text-yellow-300 font-bold';
-			case 'I': return 'text-blue-300';
-			case 'D': return 'text-green-300';
-			default: return 'text-gray-100';
+			case 'E': return 'level-error';
+			case 'W': return 'level-warn';
+			case 'I': return 'level-info';
+			case 'D': return 'level-debug';
+			default: return 'level-default';
 		}
 	}
 
