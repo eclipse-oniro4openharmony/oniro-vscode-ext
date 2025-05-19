@@ -48,6 +48,10 @@
       {
         "command": "oniro-ide.sign",
         "title": "Oniro: Sign App"
+      },
+      {
+        "command": "oniro-ide.runAll",
+        "title": "Oniro: Run All (Emulator, Build, Install, Launch)"
       }
     ],
     "taskDefinitions": [

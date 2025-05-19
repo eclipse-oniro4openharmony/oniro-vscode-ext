@@ -96,6 +96,31 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	const runAllDisposable = vscode.commands.registerCommand('oniro-ide.runAll', async () => {
+		const progressOptions = {
+			title: 'Oniro: Running All Steps',
+			location: vscode.ProgressLocation.Notification,
+			cancellable: false
+		};
+		await vscode.window.withProgress(progressOptions, async (progress) => {
+			try {
+				progress.report({ message: 'Starting emulator...' });
+				await startEmulator();
+				progress.report({ message: 'Connecting to emulator...' });
+				await connectEmulator();
+				progress.report({ message: 'Building app...' });
+				await onirobuilderBuild();
+				progress.report({ message: 'Installing app...' });
+				await installApp();
+				progress.report({ message: 'Launching app...' });
+				await launchApp();
+				vscode.window.showInformationMessage('Oniro: All steps completed successfully!');
+			} catch (err) {
+				vscode.window.showErrorMessage(`Oniro: Run All failed: ${err}`);
+			}
+		});
+	});
+
 	// Register Oniro Task Provider
 	const oniTasks = vscode.tasks.registerTaskProvider(OniroTaskProvider.OniroType, new OniroTaskProvider());
 	context.subscriptions.push(oniTasks);
@@ -113,7 +138,8 @@ export function activate(context: vscode.ExtensionContext) {
 		stopEmulatorDisposable,
 		connectEmulatorDisposable,
 		installDisposable,
-		launchDisposable
+		launchDisposable,
+		runAllDisposable
 	);
 }
 
