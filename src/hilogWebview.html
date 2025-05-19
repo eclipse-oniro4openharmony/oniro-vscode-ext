@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Oniro HiLog Viewer</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+	<div class="p-4 flex flex-col gap-4">
+		<div class="flex gap-2 items-end flex-wrap">
+			<div>
+				<label class="block text-sm font-medium mb-1" for="processId">Process ID</label>
+				<input id="processId" type="text" class="rounded px-2 py-1 text-black" placeholder="e.g. 1234" />
+			</div>
+			<div>
+				<label class="block text-sm font-medium mb-1">Severity</label>
+				<div class="flex gap-1">
+					<label class="inline-flex items-center"><input type="checkbox" value="E" class="severity" checked><span class="ml-1">Error</span></label>
+					<label class="inline-flex items-center"><input type="checkbox" value="W" class="severity" checked><span class="ml-1">Warning</span></label>
+					<label class="inline-flex items-center"><input type="checkbox" value="I" class="severity" checked><span class="ml-1">Info</span></label>
+					<label class="inline-flex items-center"><input type="checkbox" value="D" class="severity" checked><span class="ml-1">Debug</span></label>
+				</div>
+			</div>
+			<button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded ml-4">Start</button>
+			<button id="stopBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded ml-2">Stop</button>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-xs border-separate border-spacing-y-1" id="logTable">
+				<thead>
+					<tr class="bg-gray-800">
+						<th class="px-2 py-1 text-left">Time</th>
+						<th class="px-2 py-1 text-left">PID</th>
+						<th class="px-2 py-1 text-left">TID</th>
+						<th class="px-2 py-1 text-left">Level</th>
+						<th class="px-2 py-1 text-left">Tag</th>
+						<th class="px-2 py-1 text-left">Message</th>
+					</tr>
+				</thead>
+				<tbody id="logTableBody" class="font-mono"></tbody>
+			</table>
+		</div>
+	</div>
+	<script>
+	const vscode = acquireVsCodeApi();
+	let running = false;
+	document.getElementById('startBtn').onclick = () => {
+		const processId = document.getElementById('processId').value.trim();
+		const severity = Array.from(document.querySelectorAll('.severity:checked')).map(cb => cb.value);
+		if (!processId) {
+			alert('Please enter a process ID');
+			return;
+		}
+		document.getElementById('logTableBody').innerHTML = '';
+		vscode.postMessage({ command: 'startLog', processId, severity });
+		running = true;
+	};
+	document.getElementById('stopBtn').onclick = () => {
+		vscode.postMessage({ command: 'stopLog' });
+		running = false;
+	};
+
+	function parseLogLine(line) {
+		// Example: 05-19 22:35:37.818  3687  3712 E C01406/OHOS::RS: QueryEglBufferAge: eglQuerySurface is failed
+		const regex = /^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\s+(\d+)\s+(\d+)\s+([EWID])\s+([^:]+):\s*(.*)$/;
+		const match = line.match(regex);
+		if (!match) return null;
+		return {
+			time: match[1],
+			pid: match[2],
+			tid: match[3],
+			level: match[4],
+			tag: match[5],
+			message: match[6]
+		};
+	}
+
+	function levelColor(level) {
+		switch(level) {
+			case 'E': return 'text-red-400 font-bold';
+			case 'W': return 'text-yellow-300 font-bold';
+			case 'I': return 'text-blue-300';
+			case 'D': return 'text-green-300';
+			default: return 'text-gray-100';
+		}
+	}
+
+	window.addEventListener('message', event => {
+		const msg = event.data;
+		if (msg.command === 'log') {
+			const logTableBody = document.getElementById('logTableBody');
+			const parsed = parseLogLine(msg.line);
+			if (!parsed) return;
+			const tr = document.createElement('tr');
+			tr.className = 'hover:bg-gray-800';
+			tr.innerHTML = [
+				`<td class="px-2 py-1 whitespace-nowrap">${parsed.time}</td>`,
+				`<td class="px-2 py-1 whitespace-nowrap">${parsed.pid}</td>`,
+				`<td class="px-2 py-1 whitespace-nowrap">${parsed.tid}</td>`,
+				`<td class="px-2 py-1 whitespace-nowrap ${levelColor(parsed.level)}">${parsed.level}</td>`,
+				`<td class="px-2 py-1 whitespace-nowrap">${parsed.tag}</td>`,
+				`<td class="px-2 py-1">${parsed.message}</td>`
+			].join('');
+			logTableBody.appendChild(tr);
+			logTableBody.parentElement.scrollTop = logTableBody.parentElement.scrollHeight;
+		}
+		if (msg.command === 'error') {
+			const logTableBody = document.getElementById('logTableBody');
+			const tr = document.createElement('tr');
+			tr.innerHTML = `<td colspan="6" class="text-red-600">[ERROR] ${msg.line}</td>`;
+			logTableBody.appendChild(tr);
+		}
+	});
+	</script>
+</body>
+</html>

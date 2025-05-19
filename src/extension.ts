@@ -1,6 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { onirobuilderInit, onirobuilderBuild, onirobuilderSign } from './utils/onirobuilder';
 import { startEmulator, stopEmulator, connectEmulator } from './utils/emulatorManager';
 import { installApp, launchApp } from './utils/hdcManager';
@@ -121,13 +123,58 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	// Register Oniro Task Provider
-	const oniTasks = vscode.tasks.registerTaskProvider(OniroTaskProvider.OniroType, new OniroTaskProvider());
-	context.subscriptions.push(oniTasks);
+	const showHilogViewerDisposable = vscode.commands.registerCommand('oniro-ide.showHilogViewer', () => {
+		const panel = vscode.window.createWebviewPanel(
+			'oniroHilogViewer',
+			'Oniro HiLog Viewer',
+			vscode.ViewColumn.One,
+			{
+				enableScripts: true
+			}
+		);
 
-	// Register Oniro Debug Configuration Provider
-	const oniDebug = vscode.debug.registerDebugConfigurationProvider('oniro-debug', new OniroDebugProvider());
-	context.subscriptions.push(oniDebug);
+		panel.webview.html = getHilogWebviewContent(context);
+
+		let hdcProcess: import('child_process').ChildProcessWithoutNullStreams | undefined;
+
+		panel.webview.onDidReceiveMessage(
+			message => {
+				if (message.command === 'startLog') {
+					const { processId, severity } = message;
+					if (hdcProcess) {
+						hdcProcess.kill();
+					}
+					const spawn = require('child_process').spawn;
+					hdcProcess = spawn('hdc', ['shell', 'hilog', '-P', processId]);
+					if (hdcProcess) {
+						hdcProcess.stdout.on('data', (data: Buffer) => {
+							const lines = data.toString().split('\n').filter(Boolean);
+							for (const line of lines) {
+								if (severity.length === 0 || severity.some((lvl: string) => line.includes(lvl))) {
+									panel.webview.postMessage({ command: 'log', line });
+								}
+							}
+						});
+						hdcProcess.stderr.on('data', (data: Buffer) => {
+							panel.webview.postMessage({ command: 'error', line: data.toString() });
+						});
+					}
+				}
+				if (message.command === 'stopLog' && hdcProcess) {
+					hdcProcess.kill();
+					hdcProcess = undefined;
+				}
+			},
+			undefined,
+			context.subscriptions
+		);
+
+		panel.onDidDispose(() => {
+			if (hdcProcess) {
+				hdcProcess.kill();
+			}
+		});
+	});
 
 	context.subscriptions.push(
 		disposable,
@@ -139,8 +186,18 @@ export function activate(context: vscode.ExtensionContext) {
 		connectEmulatorDisposable,
 		installDisposable,
 		launchDisposable,
-		runAllDisposable
+		runAllDisposable,
+		showHilogViewerDisposable
 	);
+}
+
+function getHilogWebviewContent(context: vscode.ExtensionContext): string {
+	const htmlPath = path.join(context.extensionPath, 'src', 'hilogWebview.html');
+	try {
+		return fs.readFileSync(htmlPath, 'utf8');
+	} catch (err) {
+		return `<html><body><h2>Failed to load HiLog Viewer UI</h2><pre>${err}</pre></body></html>`;
+	}
 }
 
 // This method is called when your extension is deactivated
