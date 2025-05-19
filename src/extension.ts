@@ -10,6 +10,7 @@ import { OniroTaskProvider } from './providers/OniroTaskProvider';
 import { OniroDebugProvider } from './providers/OniroDebugProvider';
 import { registerHilogViewerCommand } from './hilogViewer';
 import { oniroLogChannel } from './utils/logger';
+import { OniroTreeDataProvider } from './OniroTreeDataProvider';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -145,6 +146,11 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		});
 	});
+
+	// Register Oniro Tree View
+	const oniroTreeDataProvider = new OniroTreeDataProvider();
+	vscode.window.registerTreeDataProvider('oniroMainView', oniroTreeDataProvider);
+	vscode.commands.registerCommand('oniro-ide.refreshTreeView', () => oniroTreeDataProvider.refresh());
 
 	registerHilogViewerCommand(context);
 

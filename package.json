@@ -100,7 +100,24 @@
           }
         ]
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "oniro-sidebar",
+          "title": "Oniro",
+          "icon": "media/oniro-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "oniro-sidebar": [
+        {
+          "id": "oniroMainView",
+          "name": "Oniro Tools"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
