@@ -33,6 +33,25 @@ async function attemptHdcConnection(): Promise<boolean> {
 }
 
 export async function startEmulator(): Promise<void> {
+  // Check if emulator is already running
+  if (fs.existsSync(PID_FILE)) {
+    try {
+      const pid = fs.readFileSync(PID_FILE, 'utf8').trim();
+      if (pid && !isNaN(Number(pid))) {
+        // Check if process is running
+        try {
+          process.kill(Number(pid), 0);
+          vscode.window.showWarningMessage('Emulator is already running.');
+          emulatorChannel.appendLine(`Emulator already running with PID ${pid}.`);
+          return;
+        } catch (e) {
+          // Process not running, continue to start emulator
+        }
+      }
+    } catch (err) {
+      emulatorChannel.appendLine(`WARNING: Could not read PID file: ${(err as Error).message}`);
+    }
+  }
   // Start emulator in background and store PID
   await execPromise(`(onirobuilder emulator > /dev/null 2>&1 & echo $! > ${PID_FILE})`);
   emulatorChannel.appendLine(`Emulator started in background. PID stored in ${PID_FILE}`);
