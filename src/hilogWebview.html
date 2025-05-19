@@ -15,12 +15,13 @@
 			</div>
 			<div>
 				<label class="block text-sm font-medium mb-1">Severity</label>
-				<div class="flex gap-1">
-					<label class="inline-flex items-center"><input type="checkbox" value="E" class="severity" checked><span class="ml-1">Error</span></label>
-					<label class="inline-flex items-center"><input type="checkbox" value="W" class="severity" checked><span class="ml-1">Warning</span></label>
-					<label class="inline-flex items-center"><input type="checkbox" value="I" class="severity" checked><span class="ml-1">Info</span></label>
-					<label class="inline-flex items-center"><input type="checkbox" value="D" class="severity" checked><span class="ml-1">Debug</span></label>
-				</div>
+				<select id="severitySelect" class="rounded px-2 py-1 text-black">
+					<option value="DEBUG">Debug</option>
+					<option value="INFO" selected>Info</option>
+					<option value="WARN">Warning</option>
+					<option value="ERROR">Error</option>
+					<option value="FATAL">Fatal</option>
+				</select>
 			</div>
 			<button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded ml-4">Start</button>
 			<button id="stopBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded ml-2">Stop</button>
@@ -52,7 +53,7 @@
 	let running = false;
 	document.getElementById('startBtn').onclick = () => {
 		const processId = document.getElementById('processId').value.trim();
-		const severity = Array.from(document.querySelectorAll('.severity:checked')).map(cb => cb.value);
+		const severity = document.getElementById('severitySelect').value;
 		if (!processId) {
 			alert('Please enter a process ID');
 			return;
@@ -64,6 +65,22 @@
 	document.getElementById('stopBtn').onclick = () => {
 		vscode.postMessage({ command: 'stopLog' });
 		running = false;
+	};
+
+	// Map severity select value to log level order
+	const severityOrder = {
+		'DEBUG': 1,
+		'INFO': 2,
+		'WARN': 3,
+		'ERROR': 4,
+		'FATAL': 5
+	};
+	const levelMap = {
+		'D': 1, // DEBUG
+		'I': 2, // INFO
+		'W': 3, // WARN
+		'E': 4, // ERROR
+		'F': 5  // FATAL (if present)
 	};
 
 	function parseLogLine(line) {
@@ -121,6 +138,11 @@
 			const logTableBody = document.getElementById('logTableBody');
 			const parsed = parseLogLine(msg.line);
 			if (!parsed) return;
+			// Severity filtering
+			const selectedSeverity = document.getElementById('severitySelect').value;
+			const minLevel = severityOrder[selectedSeverity] || 1;
+			const logLevel = levelMap[parsed.level] || 1;
+			if (logLevel < minLevel) return;
 			const tr = document.createElement('tr');
 			tr.className = 'hover:bg-gray-800';
 			tr.innerHTML = [

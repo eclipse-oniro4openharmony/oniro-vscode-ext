@@ -138,21 +138,35 @@ export function activate(context: vscode.ExtensionContext) {
 		let hdcProcess: import('child_process').ChildProcessWithoutNullStreams | undefined;
 
 		panel.webview.onDidReceiveMessage(
-			message => {
+			async message => {
 				if (message.command === 'startLog') {
 					const { processId, severity } = message;
 					if (hdcProcess) {
 						hdcProcess.kill();
 					}
 					const spawn = require('child_process').spawn;
+					// Map UI value to hilog -b argument
+					const severityMap: Record<string, string> = {
+						'DEBUG': 'DEBUG',
+						'INFO': 'INFO',
+						'WARN': 'WARN',
+						'ERROR': 'ERROR',
+						'FATAL': 'FATAL'
+					};
+					const level = severityMap[severity] || 'INFO';
+					// First set the buffer level
+					await new Promise<void>((resolve, reject) => {
+						const setLevel = spawn('hdc', ['shell', 'hilog', '-b', level]);
+						setLevel.on('close', () => resolve());
+						setLevel.on('error', reject);
+					});
+					// Then start log process
 					hdcProcess = spawn('hdc', ['shell', 'hilog', '-P', processId]);
 					if (hdcProcess) {
 						hdcProcess.stdout.on('data', (data: Buffer) => {
 							const lines = data.toString().split('\n').filter(Boolean);
 							for (const line of lines) {
-								if (severity.length === 0 || severity.some((lvl: string) => line.includes(lvl))) {
-									panel.webview.postMessage({ command: 'log', line });
-								}
+								panel.webview.postMessage({ command: 'log', line });
 							}
 						});
 						hdcProcess.stderr.on('data', (data: Buffer) => {
