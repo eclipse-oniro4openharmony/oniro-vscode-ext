@@ -96,11 +96,15 @@ async function downloadFile(url: string, dest: string, progress?: vscode.Progres
             }
             const total = parseInt(response.headers['content-length'] || '0', 10);
             let downloaded = 0;
+            let lastPercent = 0;
             response.on('data', chunk => {
                 downloaded += chunk.length;
                 if (progress && total) {
                     const percent = Math.min(100, Math.round((downloaded / total) * 100));
-                    progress.report({ message: `Downloading: ${percent}%`, increment: 0 });
+                    if (percent > lastPercent) {
+                        progress.report({ message: `Downloading: ${percent}%`, increment: percent - lastPercent });
+                        lastPercent = percent;
+                    }
                 }
             });
             response.pipe(file);
