@@ -5,17 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oniro SDK Manager</title>
     <style>
-        body { font-family: var(--vscode-font-family); background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); margin: 0; padding: 0; }
-        h2 { margin: 16px; }
-        .sdk-list { margin: 16px; }
-        .sdk-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--vscode-editorWidget-border); }
-        .sdk-info { display: flex; flex-direction: column; }
-        .sdk-version { font-weight: bold; }
-        .sdk-api { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
-        .sdk-actions { display: flex; align-items: center; gap: 12px; }
-        .sdk-actions button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; }
-        .sdk-actions button:hover { background: var(--vscode-button-hoverBackground); }
-        .sdk-checkbox { width: 18px; height: 18px; }
+        body {
+            font-family: var(--vscode-font-family);
+            background: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            margin: 0;
+            padding: 0;
+        }
+        h2 {
+            margin: 24px 0 8px 0;
+            text-align: center;
+            font-size: 1.7em;
+            letter-spacing: 1px;
+        }
+        .sdk-list {
+            margin: 0 auto;
+            max-width: 520px;
+            padding: 0 12px 32px 12px;
+        }
+        .sdk-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--vscode-editorWidget-background, #23272e);
+            border-radius: 10px;
+            box-shadow: 0 2px 8px 0 rgba(0,0,0,0.07);
+            padding: 18px 22px;
+            margin: 18px 0;
+            border: 1px solid var(--vscode-editorWidget-border, #333);
+            transition: box-shadow 0.2s;
+        }
+        .sdk-item:hover {
+            box-shadow: 0 4px 16px 0 rgba(0,0,0,0.13);
+        }
+        .sdk-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .sdk-version {
+            font-weight: 600;
+            font-size: 1.13em;
+            margin-bottom: 2px;
+        }
+        .sdk-api {
+            font-size: 0.98em;
+            color: var(--vscode-descriptionForeground, #888);
+        }
+        .sdk-status {
+            font-size: 0.93em;
+            margin-top: 6px;
+            color: var(--vscode-editorInfo-foreground, #4fc3f7);
+            font-style: italic;
+        }
+        .sdk-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            min-width: 120px;
+        }
+        .sdk-actions button {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 7px 22px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background 0.15s, color 0.15s;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.04);
+        }
+        .sdk-actions button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+        .sdk-actions button.remove {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+        .sdk-actions button.remove:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+        .sdk-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--vscode-button-background, #007acc);
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @media (max-width: 600px) {
+            .sdk-item { flex-direction: column; align-items: stretch; gap: 10px; }
+            .sdk-actions { align-items: stretch; min-width: 0; }
+        }
     </style>
 </head>
 <body>
@@ -27,6 +109,9 @@
         const vscode = acquireVsCodeApi();
         function downloadSdk(version, api) {
             vscode.postMessage({ command: 'downloadSdk', version, api });
+        }
+        function removeSdk(version, api) {
+            vscode.postMessage({ command: 'removeSdk', version, api });
         }
     </script>
 </body>
