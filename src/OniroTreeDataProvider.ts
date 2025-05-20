@@ -94,6 +94,21 @@ export class OniroTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
             launchAppItem.tooltip = 'Launches the app on the emulator/device.';
             launchAppItem.iconPath = new vscode.ThemeIcon('rocket');
 
+            const sdkManagerItem = new vscode.TreeItem('SDK Manager', vscode.TreeItemCollapsibleState.None);
+            sdkManagerItem.command = {
+                command: OniroCommands.OPEN_SDK_MANAGER,
+                title: 'Open SDK Manager'
+            };
+            sdkManagerItem.tooltip = 'Manage and install OpenHarmony SDKs.';
+            sdkManagerItem.iconPath = new vscode.ThemeIcon('tools');
+
+            const hilogViewerItem = new vscode.TreeItem('HiLog Viewer', vscode.TreeItemCollapsibleState.None);
+            hilogViewerItem.command = {
+                command: OniroCommands.SHOW_HILOG_VIEWER,
+                title: 'Open HiLog Viewer'
+            };
+            hilogViewerItem.tooltip = 'Open the Oniro HiLog log viewer.';
+            hilogViewerItem.iconPath = new vscode.ThemeIcon('output');
 
             return Promise.resolve([
                 runAllItem,
@@ -104,7 +119,9 @@ export class OniroTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
                 stopEmulatorItem,
                 connectEmulatorItem,
                 installAppItem,
-                launchAppItem
+                launchAppItem,
+                sdkManagerItem,
+                hilogViewerItem // Add HiLog Viewer to the tree
             ]);
         }
     }
@@ -120,5 +137,7 @@ export class OniroCommands {
     public static readonly CONNECT_EMULATOR = 'oniro-ide.connectEmulator';
     public static readonly INSTALL_APP = 'oniro-ide.installApp';
     public static readonly LAUNCH_APP = 'oniro-ide.launchApp';
+    public static readonly OPEN_SDK_MANAGER = 'oniro-ide.openSdkManager';
+    public static readonly SHOW_HILOG_VIEWER = 'oniro-ide.showHilogViewer';
     // Add other command constants if you create more tree items
 }

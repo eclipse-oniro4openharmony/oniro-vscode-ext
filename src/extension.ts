@@ -1,16 +1,13 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { onirobuilderInit, onirobuilderBuild, onirobuilderSign } from './utils/onirobuilder';
 import { startEmulator, stopEmulator, connectEmulator } from './utils/emulatorManager';
-import { installApp, launchApp, getBundleName, findAppProcessId } from './utils/hdcManager';
-import { OniroTaskProvider } from './providers/OniroTaskProvider';
-import { OniroDebugProvider } from './providers/OniroDebugProvider';
+import { installApp, launchApp, findAppProcessId } from './utils/hdcManager';
 import { registerHilogViewerCommand } from './hilogViewer';
 import { oniroLogChannel } from './utils/logger';
-import { OniroTreeDataProvider } from './OniroTreeDataProvider';
+import { OniroTreeDataProvider, OniroCommands } from './OniroTreeDataProvider';
+import { registerSdkManagerCommand } from './sdkManager';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -29,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('Hello World from Oniro IDE!');
 	});
 
-	const initDisposable = vscode.commands.registerCommand('oniro-ide.initSdk', async () => {
+	const initDisposable = vscode.commands.registerCommand(OniroCommands.INIT_SDK, async () => {
 		try {
 			await onirobuilderInit();
 			vscode.window.showInformationMessage('Oniro SDK initialization completed!');
@@ -38,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const buildDisposable = vscode.commands.registerCommand('oniro-ide.build', async () => {
+	const buildDisposable = vscode.commands.registerCommand(OniroCommands.BUILD, async () => {
 		try {
 			await onirobuilderBuild();
 			vscode.window.showInformationMessage('Build completed!');
@@ -47,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const signDisposable = vscode.commands.registerCommand('oniro-ide.sign', async () => {
+	const signDisposable = vscode.commands.registerCommand(OniroCommands.SIGN, async () => {
 		try {
 			await onirobuilderSign();
 			vscode.window.showInformationMessage('Signing completed!');
@@ -56,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const startEmulatorDisposable = vscode.commands.registerCommand('oniro-ide.startEmulator', async () => {
+	const startEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.START_EMULATOR, async () => {
 		try {
 			await startEmulator();
 			vscode.window.showInformationMessage('Emulator started successfully!');
@@ -65,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const stopEmulatorDisposable = vscode.commands.registerCommand('oniro-ide.stopEmulator', async () => {
+	const stopEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.STOP_EMULATOR, async () => {
 		try {
 			await stopEmulator();
 			vscode.window.showInformationMessage('Emulator stopped successfully!');
@@ -74,7 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const connectEmulatorDisposable = vscode.commands.registerCommand('oniro-ide.connectEmulator', async () => {
+	const connectEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.CONNECT_EMULATOR, async () => {
 		try {
 			await connectEmulator();
 			vscode.window.showInformationMessage('Emulator connected successfully!');
@@ -83,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const installDisposable = vscode.commands.registerCommand('oniro-ide.installApp', async () => {
+	const installDisposable = vscode.commands.registerCommand(OniroCommands.INSTALL_APP, async () => {
 		try {
 			await installApp();
 			vscode.window.showInformationMessage('App installed successfully!');
@@ -92,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const launchDisposable = vscode.commands.registerCommand('oniro-ide.launchApp', async () => {
+	const launchDisposable = vscode.commands.registerCommand(OniroCommands.LAUNCH_APP, async () => {
 		try {
 			await launchApp();
 			vscode.window.showInformationMessage('App launched successfully!');
@@ -101,7 +98,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const runAllDisposable = vscode.commands.registerCommand('oniro-ide.runAll', async () => {
+	const runAllDisposable = vscode.commands.registerCommand(OniroCommands.RUN_ALL, async () => {
 		const progressOptions = {
 			title: 'Oniro: Running All Steps',
 			location: vscode.ProgressLocation.Notification,
@@ -153,6 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('oniro-ide.refreshTreeView', () => oniroTreeDataProvider.refresh());
 
 	registerHilogViewerCommand(context);
+	registerSdkManagerCommand(context);
 
 	context.subscriptions.push(
 		disposable,
