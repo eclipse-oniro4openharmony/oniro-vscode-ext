@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oniro SDK Manager</title>
+    <style>
+        body { font-family: var(--vscode-font-family); background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); margin: 0; padding: 0; }
+        h2 { margin: 16px; }
+        .sdk-list { margin: 16px; }
+        .sdk-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--vscode-editorWidget-border); }
+        .sdk-info { display: flex; flex-direction: column; }
+        .sdk-version { font-weight: bold; }
+        .sdk-api { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
+        .sdk-actions { display: flex; align-items: center; gap: 12px; }
+        .sdk-actions button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; }
+        .sdk-actions button:hover { background: var(--vscode-button-hoverBackground); }
+        .sdk-checkbox { width: 18px; height: 18px; }
+    </style>
+</head>
+<body>
+    <h2>Oniro SDK Manager</h2>
+    <div class="sdk-list">
+        <!-- SDK_LIST_PLACEHOLDER -->
+    </div>
+    <script>
+        const vscode = acquireVsCodeApi();
+        function downloadSdk(version, api) {
+            vscode.postMessage({ command: 'downloadSdk', version, api });
+        }
+    </script>
+</body>
+</html>

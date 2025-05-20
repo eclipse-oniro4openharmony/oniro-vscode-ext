@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { OniroCommands } from './OniroTreeDataProvider';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface SdkInfo {
     version: string;
@@ -31,53 +33,23 @@ export function setSdkInstalled(version: string, installed: boolean) {
     }
 }
 
-export function getSdkManagerHtml(sdkList: SdkInfo[]): string {
-    return `
-    <!DOCTYPE html>
-    <html lang=\"en\">
-    <head>
-        <meta charset=\"UTF-8\">
-        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-        <title>Oniro SDK Manager</title>
-        <style>
-            body { font-family: var(--vscode-font-family); background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); margin: 0; padding: 0; }
-            h2 { margin: 16px; }
-            .sdk-list { margin: 16px; }
-            .sdk-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--vscode-editorWidget-border); }
-            .sdk-info { display: flex; flex-direction: column; }
-            .sdk-version { font-weight: bold; }
-            .sdk-api { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
-            .sdk-actions { display: flex; align-items: center; gap: 12px; }
-            .sdk-actions button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer; }
-            .sdk-actions button:hover { background: var(--vscode-button-hoverBackground); }
-            .sdk-checkbox { width: 18px; height: 18px; }
-        </style>
-    </head>
-    <body>
-        <h2>Oniro SDK Manager</h2>
-        <div class=\"sdk-list\">
-            ${sdkList.map(sdk => `
-                <div class=\"sdk-item\">
-                    <div class=\"sdk-info\">
-                        <span class=\"sdk-version\">OpenHarmony ${sdk.version}</span>
-                        <span class=\"sdk-api\">API Level ${sdk.api}</span>
-                    </div>
-                    <div class=\"sdk-actions\">
-                        <input type=\"checkbox\" class=\"sdk-checkbox\" id=\"sdk-${sdk.version}\" ${sdk.installed ? 'checked' : ''} disabled />
-                        <button onclick=\"downloadSdk('${sdk.version}', '${sdk.api}')\" ${sdk.installed ? 'disabled' : ''}>Download & Install</button>
-                    </div>
-                </div>
-            `).join('')}
+export function getSdkManagerHtml(context: vscode.ExtensionContext, sdkList: SdkInfo[]): string {
+    const htmlPath = path.join(context.extensionPath, 'src', 'sdkManagerWebview.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
+    const sdkListHtml = sdkList.map(sdk => `
+        <div class=\"sdk-item\">
+            <div class=\"sdk-info\">
+                <span class=\"sdk-version\">OpenHarmony ${sdk.version}</span>
+                <span class=\"sdk-api\">API Level ${sdk.api}</span>
+            </div>
+            <div class=\"sdk-actions\">
+                <input type=\"checkbox\" class=\"sdk-checkbox\" id=\"sdk-${sdk.version}\" ${sdk.installed ? 'checked' : ''} disabled />
+                <button onclick=\"downloadSdk('${sdk.version}', '${sdk.api}')\" ${sdk.installed ? 'disabled' : ''}>Download & Install</button>
+            </div>
         </div>
-        <script>
-            const vscode = acquireVsCodeApi();
-            function downloadSdk(version, api) {
-                vscode.postMessage({ command: 'downloadSdk', version, api });
-            }
-        </script>
-    </body>
-    </html>
-    `;
+    `).join('');
+    html = html.replace('<!-- SDK_LIST_PLACEHOLDER -->', sdkListHtml);
+    return html;
 }
 
 export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
@@ -90,7 +62,7 @@ export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
         );
 
         function updateWebview() {
-            panel.webview.html = getSdkManagerHtml(getAvailableSdks());
+            panel.webview.html = getSdkManagerHtml(context, getAvailableSdks());
         }
 
         updateWebview();
