@@ -10,6 +10,7 @@ import { promisify } from 'util';
 import * as crypto from 'crypto';
 import * as tar from 'tar';
 import { oniroLogChannel } from './utils/logger';
+import extractZip from 'extract-zip';
 
 export interface SdkInfo {
     version: string;
@@ -182,6 +183,16 @@ export async function downloadAndInstallSdk(version: string, api: string, progre
         await verifySha256(tarPath, sha256Path);
         if (progress) progress.report({ message: 'Extracting SDK (this may take a while)...', increment: 0 });
         await extractTarball(tarPath, extractDir, strip);
+        if (progress) progress.report({ message: 'Extracting SDK components (this may take a while)...', increment: 0 });
+        // Unzip each component archive in the OS directory
+        const osContentPath = path.join(extractDir, osFolder);
+        const zipFiles = fs.readdirSync(osContentPath).filter(name => name.endsWith('.zip'));
+        for (const zipFile of zipFiles) {
+            oniroLogChannel.appendLine(`[SDK] Extracting component ${zipFile}`);
+            const zipPath = path.join(osContentPath, zipFile);
+            await extractZip(zipPath, { dir: osContentPath });
+            fs.unlinkSync(zipPath);
+        }
         if (progress) progress.report({ message: 'Finalizing installation...', increment: 0 });
         // Move the correct OS folder to sdkInstallDir
         const osPath = path.join(extractDir, osFolder);
