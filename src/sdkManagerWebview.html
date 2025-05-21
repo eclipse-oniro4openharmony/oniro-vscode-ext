@@ -98,12 +98,53 @@
             .sdk-item { flex-direction: column; align-items: stretch; gap: 10px; }
             .sdk-actions { align-items: stretch; min-width: 0; }
         }
+        .main-flex-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 12px 32px 12px;
+        }
+        .sdk-list, .cmd-tools-section {
+            flex: 1 1 0;
+            min-width: 320px;
+            max-width: 520px;
+        }
+        .cmd-tools-section {
+            margin-top: 0;
+        }
+        @media (max-width: 1100px) {
+            .main-flex-container { flex-direction: column; gap: 24px; align-items: center; }
+            .sdk-list, .cmd-tools-section { max-width: 520px; min-width: 0; width: 100%; }
+            .cmd-tools-section { margin-top: 0; }
+        }
+        .sdk-list, .cmd-tools-section {
+            box-sizing: border-box;
+        }
+        .cmd-tools-item, .cmd-tools-info, .cmd-tools-title, .cmd-tools-status, .cmd-tools-actions { display: unset !important; background: unset !important; border: unset !important; box-shadow: unset !important; padding: unset !important; margin: unset !important; font-size: unset !important; color: unset !important; font-weight: unset !important; }
     </style>
 </head>
 <body>
     <h2>Oniro SDK Manager</h2>
-    <div class="sdk-list">
-        <!-- SDK_LIST_PLACEHOLDER -->
+    <div class="main-flex-container">
+        <div class="sdk-list">
+            <!-- SDK_LIST_PLACEHOLDER -->
+        </div>
+        <div class="cmd-tools-section">
+            <div class="sdk-item">
+                <div class="sdk-info">
+                    <span class="sdk-version">OpenHarmony Command Line Tools</span>
+                    <span class="sdk-status" id="cmd-tools-status">Checking...</span>
+                </div>
+                <div class="sdk-actions">
+                    <button id="cmd-tools-install" style="display:none">Install</button>
+                    <button id="cmd-tools-remove" class="remove" style="display:none">Remove</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script>
         const vscode = acquireVsCodeApi();
@@ -113,6 +154,24 @@
         function removeSdk(version, api) {
             vscode.postMessage({ command: 'removeSdk', version, api });
         }
+        // Command line tools UI logic
+        window.addEventListener('DOMContentLoaded', () => {
+            vscode.postMessage({ command: 'checkCmdTools' });
+            window.addEventListener('message', event => {
+                const msg = event.data;
+                if (msg.type === 'cmdToolsStatus') {
+                    document.getElementById('cmd-tools-status').textContent = msg.status;
+                    document.getElementById('cmd-tools-install').style.display = msg.installed ? 'none' : '';
+                    document.getElementById('cmd-tools-remove').style.display = msg.installed ? '' : 'none';
+                }
+            });
+            document.getElementById('cmd-tools-install').onclick = () => {
+                vscode.postMessage({ command: 'installCmdTools' });
+            };
+            document.getElementById('cmd-tools-remove').onclick = () => {
+                vscode.postMessage({ command: 'removeCmdTools' });
+            };
+        });
     </script>
 </body>
 </html>

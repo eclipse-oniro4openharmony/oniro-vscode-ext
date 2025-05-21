@@ -55,7 +55,7 @@ export function getAvailableSdks(): SdkInfo[] {
     return ALL_SDKS.map(sdk => ({ ...sdk, installed: installedSdks.includes(sdk.version) }));
 }
 
-export function getSdkManagerHtml(context: vscode.ExtensionContext, sdkList: SdkInfo[]): string {
+export function getSdkManagerHtml(context: vscode.ExtensionContext, sdkList: SdkInfo[], cmdToolsStatus?: { installed: boolean, status: string }): string {
     const htmlPath = path.join(context.extensionPath, 'src', 'sdkManagerWebview.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
     const sdkListHtml = sdkList.map(sdk => `
@@ -76,7 +76,43 @@ export function getSdkManagerHtml(context: vscode.ExtensionContext, sdkList: Sdk
         </div>
     `).join('');
     html = html.replace('<!-- SDK_LIST_PLACEHOLDER -->', sdkListHtml);
+    // Inject command line tools status if available
+    if (cmdToolsStatus) {
+        html = html.replace(
+            'id="cmd-tools-status">Checking...</span>',
+            `id="cmd-tools-status">${cmdToolsStatus.status}</span>`
+        );
+        html = html.replace(
+            'id="cmd-tools-install" style="display:none"',
+            `id="cmd-tools-install" style="display:${cmdToolsStatus.installed ? 'none' : ''}"`
+        );
+        html = html.replace(
+            'id="cmd-tools-remove" class="remove" style="display:none"',
+            `id="cmd-tools-remove" class="remove" style="display:${cmdToolsStatus.installed ? '' : 'none'}"`
+        );
+    }
     return html;
+}
+
+// Command line tools install location and check helpers
+const CMD_TOOLS_PATH = path.join(os.homedir(), 'setup-ohos-sdk', 'cmd-tools');
+const CMD_TOOLS_BIN = path.join(CMD_TOOLS_PATH, 'bin', 'ohpm');
+
+export function isCmdToolsInstalled(): boolean {
+    return fs.existsSync(CMD_TOOLS_BIN);
+}
+
+export function getCmdToolsStatus(): { installed: boolean, status: string } {
+    if (isCmdToolsInstalled()) {
+        try {
+            const version = require('child_process').execFileSync(CMD_TOOLS_BIN, ['-v'], { encoding: 'utf8' }).trim();
+            return { installed: true, status: `Installed (${version})` };
+        } catch {
+            return { installed: true, status: 'Installed (version unknown)' };
+        }
+    } else {
+        return { installed: false, status: 'Not installed' };
+    }
 }
 
 const pipelineAsync = promisify(pipeline);
@@ -210,6 +246,52 @@ export async function downloadAndInstallSdk(version: string, api: string, progre
     }
 }
 
+export async function installCmdTools(progress?: vscode.Progress<{message?: string, increment?: number}>, abortSignal?: AbortSignal): Promise<void> {
+    // Based on cmd_tools_installer.sh logic
+    const CMD_PATH = CMD_TOOLS_PATH;
+    const url = 'https://repo.huaweicloud.com/harmonyos/ohpm/5.0.5/commandline-tools-linux-x64-5.0.5.310.zip';
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oniro-cmdtools-'));
+    const zipPath = path.join(tmpDir, 'oh-command-line-tools.zip');
+    const extractPath = path.join(tmpDir, 'oh-command-line-tools');
+    try {
+        if (progress) progress.report({ message: 'Downloading command line tools...', increment: 0 });
+        await downloadFile(url, zipPath, progress, abortSignal);
+        if (progress) progress.report({ message: 'Extracting tools...', increment: 0 });
+        await extractZip(zipPath, { dir: extractPath });
+        // Move extracted files to CMD_PATH
+        fs.mkdirSync(CMD_PATH, { recursive: true });
+        const srcDir = path.join(extractPath, 'command-line-tools');
+        for (const entry of fs.readdirSync(srcDir)) {
+            const src = path.join(srcDir, entry);
+            const dest = path.join(CMD_PATH, entry);
+            if (fs.statSync(src).isDirectory()) {
+                if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
+                fs.renameSync(src, dest);
+            } else {
+                fs.copyFileSync(src, dest);
+            }
+        }
+        // Make bin/* executable
+        const binDir = path.join(CMD_PATH, 'bin');
+        if (fs.existsSync(binDir)) {
+            for (const file of fs.readdirSync(binDir)) {
+                fs.chmodSync(path.join(binDir, file), 0o755);
+            }
+        }
+        if (progress) progress.report({ message: 'Cleaning up...', increment: 0 });
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch (err) {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        throw err;
+    }
+}
+
+export function removeCmdTools(): void {
+    if (fs.existsSync(CMD_TOOLS_PATH)) {
+        fs.rmSync(CMD_TOOLS_PATH, { recursive: true, force: true });
+    }
+}
+
 export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
     const openSdkManagerDisposable = vscode.commands.registerCommand(OniroCommands.OPEN_SDK_MANAGER, () => {
         const panel = vscode.window.createWebviewPanel(
@@ -220,7 +302,11 @@ export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
         );
 
         function updateWebview() {
-            panel.webview.html = getSdkManagerHtml(context, getAvailableSdks());
+            panel.webview.html = getSdkManagerHtml(
+                context,
+                getAvailableSdks(),
+                getCmdToolsStatus()
+            );
         }
 
         updateWebview();
@@ -277,6 +363,44 @@ export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
                         }
                     } catch (err: any) {
                         vscode.window.showErrorMessage(`Failed to remove SDK: ${err.message}`);
+                    }
+                } else if (message.command === 'checkCmdTools') {
+                    panel.webview.postMessage({
+                        type: 'cmdToolsStatus',
+                        ...getCmdToolsStatus()
+                    });
+                } else if (message.command === 'installCmdTools') {
+                    if (currentAbortController) currentAbortController.abort();
+                    currentAbortController = new AbortController();
+                    try {
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: 'Installing OpenHarmony Command Line Tools',
+                            cancellable: true
+                        }, async (progress, token) => {
+                            token.onCancellationRequested(() => {
+                                currentAbortController?.abort();
+                            });
+                            await installCmdTools(progress, currentAbortController?.signal);
+                        });
+                        updateWebview();
+                        vscode.window.showInformationMessage('Command line tools installed.');
+                    } catch (err: any) {
+                        if (err?.message === 'Download cancelled') {
+                            vscode.window.showWarningMessage('Command line tools installation cancelled.');
+                        } else {
+                            vscode.window.showErrorMessage(`Failed to install command line tools: ${err.message}`);
+                        }
+                    } finally {
+                        currentAbortController = undefined;
+                    }
+                } else if (message.command === 'removeCmdTools') {
+                    try {
+                        removeCmdTools();
+                        updateWebview();
+                        vscode.window.showInformationMessage('Command line tools removed.');
+                    } catch (err: any) {
+                        vscode.window.showErrorMessage(`Failed to remove command line tools: ${err.message}`);
                     }
                 }
             },
