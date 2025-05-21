@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as json5 from 'json5';
 import { SDK_ROOT_DIR, CMD_TOOLS_PATH } from './sdkUtils';
 import * as os from 'os';
+import { generateSigningConfigs } from './generate_signing_configs';
 
 const workspaceFolders = vscode.workspace.workspaceFolders;
 const projectDir = workspaceFolders && workspaceFolders.length > 0
@@ -110,7 +111,30 @@ export async function onirobuilderBuild(): Promise<void> {
   logChannel.appendLine(`[onirobuilder] Build Process Complete.`);
 }
 
-export function onirobuilderSign(): Promise<void> {
+export async function onirobuilderSign(): Promise<void> {
   logChannel.appendLine(`[onirobuilder] onirobuilderSign called`);
-  return execPromise('onirobuilder sign');
+
+  // Determine OS folder for SDK path
+  const osFolder = getOsFolder();
+  const env = { ...process.env, OHOS_BASE_SDK_HOME: path.join(SDK_ROOT_DIR, osFolder) };
+
+  // Call the JS function directly instead of spawning a process
+  try {
+    logChannel.appendLine(`[onirobuilder] Generating signing configs using generateSigningConfigs...`);
+    // Set the environment variable for the script
+    process.env.OHOS_BASE_SDK_HOME = env.OHOS_BASE_SDK_HOME;
+    await new Promise<void>((resolve, reject) => {
+      try {
+        generateSigningConfigs(projectDir);
+        resolve();
+      } catch (err) {
+        logChannel.appendLine(`[onirobuilder] Error generating signing configs: ${err}`);
+        reject(err);
+      }
+    });
+    logChannel.appendLine(`[onirobuilder] Signing config generation complete.`);
+  } catch (err) {
+    vscode.window.showErrorMessage(`Failed to generate signing configs: ${err}`);
+    throw err;
+  }
 }
