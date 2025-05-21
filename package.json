@@ -14,14 +14,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "oniro-ide.helloWorld",
-        "title": "Hello World"
-      },
-      {
-        "command": "oniro-ide.initSdk",
-        "title": "Oniro: Initialize SDK"
-      },
-      {
         "command": "oniro-ide.startEmulator",
         "title": "Oniro: Start Emulator"
       },
@@ -114,7 +106,8 @@
       "oniro-sidebar": [
         {
           "id": "oniroMainView",
-          "name": "Oniro Tools"
+          "name": "Oniro Tools",
+          "icon": "media/oniro-icon.svg"
         }
       ]
     }

@@ -30,14 +30,6 @@ export class OniroTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
             runAllItem.tooltip = 'Starts emulator, builds, installs, and launches the app.';
             runAllItem.iconPath = new vscode.ThemeIcon('play-circle');
 
-            const initSdkItem = new vscode.TreeItem('Initialize SDK', vscode.TreeItemCollapsibleState.None);
-            initSdkItem.command = {
-                command: OniroCommands.INIT_SDK,
-                title: 'Initialize Oniro SDK'
-            };
-            initSdkItem.tooltip = 'Initializes the Oniro SDK.';
-            initSdkItem.iconPath = new vscode.ThemeIcon('cloud-download');
-
             const buildItem = new vscode.TreeItem('Build', vscode.TreeItemCollapsibleState.None);
             buildItem.command = {
                 command: OniroCommands.BUILD,
@@ -112,7 +104,6 @@ export class OniroTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
 
             return Promise.resolve([
                 runAllItem,
-                initSdkItem,
                 buildItem,
                 signItem,
                 startEmulatorItem,
@@ -129,7 +120,6 @@ export class OniroTreeDataProvider implements vscode.TreeDataProvider<vscode.Tre
 
 export class OniroCommands {
     public static readonly RUN_ALL = 'oniro-ide.runAll';
-    public static readonly INIT_SDK = 'oniro-ide.initSdk';
     public static readonly BUILD = 'oniro-ide.build';
     public static readonly SIGN = 'oniro-ide.sign';
     public static readonly START_EMULATOR = 'oniro-ide.startEmulator';

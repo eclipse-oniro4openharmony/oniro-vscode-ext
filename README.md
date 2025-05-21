@@ -43,7 +43,6 @@ code .
 
 1. Install and enable the Oniro IDE extension in VS Code.
 2. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`).
-3. Select **Oniro IDE: Initialize SDK** (`oniro-ide.initSdk`) to set up the Oniro SDK for your project.
 4. Use **Oniro IDE: Build and Sign** (`oniro-ide.buildAndSign`) to compile and sign your application.
 5. Start the emulator via **Oniro IDE: Start Emulator** (`oniro-ide.startEmulator`) before deploying or testing your app.
 6. When finished, stop the emulator with **Oniro IDE: Stop Emulator** (`oniro-ide.stopEmulator`).
