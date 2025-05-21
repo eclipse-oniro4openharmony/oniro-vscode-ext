@@ -4,13 +4,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     SdkInfo,
-    getSdkRootDir,
     ALL_SDKS,
     getInstalledSdks,
     getCmdToolsStatus,
     downloadAndInstallSdk,
     installCmdTools,
-    removeCmdTools
+    removeCmdTools,
+    removeSdk
 } from './utils/sdkUtils';
 
 export function getAvailableSdks(): SdkInfo[] {
@@ -109,17 +109,8 @@ export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
                     }
                 } else if (message.command === 'removeSdk') {
                     try {
-                        const sdkRoot = getSdkRootDir();
                         const { version, api } = message;
-                        const osFolders = ['linux', 'darwin', 'windows'];
-                        let removed = false;
-                        for (const osFolder of osFolders) {
-                            const sdkPath = path.join(sdkRoot, osFolder, api);
-                            if (fs.existsSync(sdkPath)) {
-                                fs.rmSync(sdkPath, { recursive: true, force: true });
-                                removed = true;
-                            }
-                        }
+                        const removed = removeSdk(api);
                         updateWebview();
                         if (removed) {
                             vscode.window.showInformationMessage(`SDK ${version} (API ${api}) removed.`);

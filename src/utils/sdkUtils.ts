@@ -17,9 +17,9 @@ export interface SdkInfo {
     installed: boolean;
 }
 
-export function getSdkRootDir(): string {
-    return path.join(os.homedir(), 'setup-ohos-sdk');
-}
+export const SDK_ROOT_DIR = path.join(os.homedir(), 'setup-ohos-sdk');
+export const CMD_TOOLS_PATH = path.join(os.homedir(), 'command-line-tools');
+export const CMD_TOOLS_BIN = path.join(CMD_TOOLS_PATH, 'bin', 'ohpm');
 
 export const ALL_SDKS = [
     { version: '4.0', api: '10' },
@@ -32,7 +32,7 @@ export const ALL_SDKS = [
 ];
 
 export function getInstalledSdks(): string[] {
-    const sdkRoot = getSdkRootDir();
+    const sdkRoot = SDK_ROOT_DIR;
     const versions = new Set<string>();
     if (!fs.existsSync(sdkRoot)) return [];
     for (const osFolder of ['linux', 'darwin', 'windows']) {
@@ -47,8 +47,6 @@ export function getInstalledSdks(): string[] {
     return ALL_SDKS.filter(sdk => versions.has(sdk.api)).map(sdk => sdk.version);
 }
 
-export const CMD_TOOLS_PATH = path.join(os.homedir(), 'command-line-tools');
-export const CMD_TOOLS_BIN = path.join(CMD_TOOLS_PATH, 'bin', 'ohpm');
 
 export function isCmdToolsInstalled(): boolean {
     return fs.existsSync(CMD_TOOLS_BIN);
@@ -160,7 +158,7 @@ export async function downloadAndInstallSdk(version: string, api: string, progre
     const sha256Path = path.join(tmpDir, filename + '.sha256');
     const extractDir = path.join(tmpDir, 'extract');
     fs.mkdirSync(extractDir);
-    const sdkInstallDir = path.join(getSdkRootDir(), osFolder, api);
+    const sdkInstallDir = path.join(SDK_ROOT_DIR, osFolder, api);
     fs.mkdirSync(path.dirname(sdkInstallDir), { recursive: true });
     try {
         if (progress) progress.report?.({ message: 'Downloading SDK archive...', increment: 0 });
@@ -237,4 +235,21 @@ export function removeCmdTools(): void {
     if (fs.existsSync(CMD_TOOLS_PATH)) {
         fs.rmSync(CMD_TOOLS_PATH, { recursive: true, force: true });
     }
+}
+
+/**
+ * Removes the SDK for the given API version from all OS folders.
+ * Returns true if any SDK was removed, false otherwise.
+ */
+export function removeSdk(api: string): boolean {
+    const osFolders = ['linux', 'darwin', 'windows'];
+    let removed = false;
+    for (const osFolder of osFolders) {
+        const sdkPath = path.join(SDK_ROOT_DIR, osFolder, api);
+        if (fs.existsSync(sdkPath)) {
+            fs.rmSync(sdkPath, { recursive: true, force: true });
+            removed = true;
+        }
+    }
+    return removed;
 }
