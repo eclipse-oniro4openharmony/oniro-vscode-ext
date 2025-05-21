@@ -3,13 +3,14 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { oniroLogChannel } from './logger';
+import { getEmulatorDir } from './sdkUtils';
 
 const emulatorChannel = oniroLogChannel;
 const PID_FILE = '/tmp/oniro_emulator.pid';
 
-function execPromise(cmd: string): Promise<void> {
+function execPromise(cmd: string, cwd?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    exec(cmd, (error, stdout, stderr) => {
+    exec(cmd, { cwd }, (error, stdout, stderr) => {
       if (stdout) emulatorChannel.appendLine(`[emulator] stdout: ${stdout.trim()}`);
       if (stderr) emulatorChannel.appendLine(`[emulator] stderr: ${stderr.trim()}`);
       if (error) {
@@ -53,7 +54,8 @@ export async function startEmulator(): Promise<void> {
     }
   }
   // Start emulator in background and store PID
-  await execPromise(`(onirobuilder emulator > /dev/null 2>&1 & echo $! > ${PID_FILE})`);
+  const emulatorImagesPath = path.join(getEmulatorDir(), 'images');
+  await execPromise(`(./run.sh & echo $! > ${PID_FILE})`, emulatorImagesPath);
   emulatorChannel.appendLine(`Emulator started in background. PID stored in ${PID_FILE}`);
   while (true) {
     if (await attemptHdcConnection()) {

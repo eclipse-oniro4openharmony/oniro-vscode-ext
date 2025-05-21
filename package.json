@@ -124,6 +124,11 @@
           "type": "string",
           "default": "${userHome}/command-line-tools",
           "description": "Directory where OpenHarmony command-line tools are installed."
+        },
+        "oniro.emulatorDir": {
+          "type": "string",
+          "default": "${userHome}/oniro-emulator",
+          "description": "Directory where Oniro emulator is installed."
         }
       }
     }
