@@ -144,6 +144,18 @@
                     <button id="cmd-tools-remove" class="remove" style="display:none">Remove</button>
                 </div>
             </div>
+            <!-- Emulator Card Start -->
+            <div class="sdk-item" style="margin-top:18px;">
+                <div class="sdk-info">
+                    <span class="sdk-version">Oniro Emulator</span>
+                    <span class="sdk-status" id="emulator-status">Not installed</span>
+                </div>
+                <div class="sdk-actions">
+                    <button id="emulator-install">Install</button>
+                    <button id="emulator-remove" class="remove" style="display:none">Remove</button>
+                </div>
+            </div>
+            <!-- Emulator Card End -->
         </div>
     </div>
     <script>
@@ -157,12 +169,32 @@
         // Command line tools UI logic
         window.addEventListener('DOMContentLoaded', () => {
             vscode.postMessage({ command: 'checkCmdTools' });
+            vscode.postMessage({ command: 'checkEmulator' });
+            function updateEmulatorUI(installed, statusText) {
+                document.getElementById('emulator-status').textContent = statusText || (installed ? 'Installed' : 'Not installed');
+                document.getElementById('emulator-install').style.display = installed ? 'none' : '';
+                document.getElementById('emulator-remove').style.display = installed ? '' : 'none';
+                document.getElementById('emulator-install').disabled = false;
+                document.getElementById('emulator-remove').disabled = false;
+            }
+            document.getElementById('emulator-install').onclick = () => {
+                updateEmulatorUI(false, 'Installing...');
+                document.getElementById('emulator-install').disabled = true;
+                vscode.postMessage({ command: 'installEmulator' });
+            };
+            document.getElementById('emulator-remove').onclick = () => {
+                updateEmulatorUI(true, 'Removing...');
+                document.getElementById('emulator-remove').disabled = true;
+                vscode.postMessage({ command: 'removeEmulator' });
+            };
             window.addEventListener('message', event => {
                 const msg = event.data;
                 if (msg.type === 'cmdToolsStatus') {
                     document.getElementById('cmd-tools-status').textContent = msg.status;
                     document.getElementById('cmd-tools-install').style.display = msg.installed ? 'none' : '';
                     document.getElementById('cmd-tools-remove').style.display = msg.installed ? '' : 'none';
+                } else if (msg.type === 'emulatorStatus') {
+                    updateEmulatorUI(msg.installed, msg.status);
                 }
             });
             document.getElementById('cmd-tools-install').onclick = () => {

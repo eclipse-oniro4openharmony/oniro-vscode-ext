@@ -10,7 +10,10 @@ import {
     downloadAndInstallSdk,
     installCmdTools,
     removeCmdTools,
-    removeSdk
+    removeSdk,
+    isEmulatorInstalled,
+    installEmulator,
+    removeEmulator
 } from './utils/sdkUtils';
 
 export function getAvailableSdks(): SdkInfo[] {
@@ -157,6 +160,61 @@ export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
                         vscode.window.showInformationMessage('Command line tools removed.');
                     } catch (err: any) {
                         vscode.window.showErrorMessage(`Failed to remove command line tools: ${err.message}`);
+                    }
+                } else if (message.command === 'checkEmulator') {
+                    const installed = isEmulatorInstalled();
+                    panel.webview.postMessage({
+                        type: 'emulatorStatus',
+                        installed,
+                        status: installed ? 'Installed' : 'Not installed'
+                    });
+                } else if (message.command === 'installEmulator') {
+                    if (currentAbortController) currentAbortController.abort();
+                    currentAbortController = new AbortController();
+                    try {
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: 'Installing Oniro Emulator',
+                            cancellable: true
+                        }, async (progress, token) => {
+                            token.onCancellationRequested(() => {
+                                currentAbortController?.abort();
+                            });
+                            await installEmulator(progress, currentAbortController?.signal);
+                        });
+                        const installed = isEmulatorInstalled();
+                        panel.webview.postMessage({
+                            type: 'emulatorStatus',
+                            installed,
+                            status: installed ? 'Installed' : 'Not installed'
+                        });
+                        vscode.window.showInformationMessage('Oniro Emulator installed.');
+                    } catch (err: any) {
+                        panel.webview.postMessage({
+                            type: 'emulatorStatus',
+                            installed: false,
+                            status: 'Not installed'
+                        });
+                        if (err?.message === 'Download cancelled') {
+                            vscode.window.showWarningMessage('Emulator installation cancelled.');
+                        } else {
+                            vscode.window.showErrorMessage(`Failed to install emulator: ${err.message}`);
+                        }
+                    } finally {
+                        currentAbortController = undefined;
+                    }
+                } else if (message.command === 'removeEmulator') {
+                    try {
+                        removeEmulator();
+                        const installed = isEmulatorInstalled();
+                        panel.webview.postMessage({
+                            type: 'emulatorStatus',
+                            installed,
+                            status: installed ? 'Installed' : 'Not installed'
+                        });
+                        vscode.window.showInformationMessage('Oniro Emulator removed.');
+                    } catch (err: any) {
+                        vscode.window.showErrorMessage(`Failed to remove emulator: ${err.message}`);
                     }
                 }
             },

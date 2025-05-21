@@ -1,8 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import * as https from 'https';
-import * as http from 'http';
+import { https, http } from 'follow-redirects';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
 import * as crypto from 'crypto';
@@ -270,4 +269,56 @@ export function removeSdk(api: string): boolean {
         }
     }
     return removed;
+}
+
+// Get Oniro Emulator directory from configuration, with fallback to ~/oniro-emulator
+export function getEmulatorDir(): string {
+    return getOniroConfig('emulatorDir', path.join(os.homedir(), 'oniro-emulator'));
+}
+
+/**
+ * Checks if the emulator is installed (by checking for run.sh in images/).
+ */
+export function isEmulatorInstalled(): boolean {
+    const emulatorRunSh = path.join(getEmulatorDir(), 'images', 'run.sh');
+    return fs.existsSync(emulatorRunSh);
+}
+
+/**
+ * Installs the Oniro emulator by downloading and extracting it.
+ */
+export async function installEmulator(
+    progress?: vscode.Progress<{message?: string, increment?: number}>,
+    abortSignal?: AbortSignal
+): Promise<void> {
+    const EMULATOR_URL = "https://github.com/eclipse-oniro4openharmony/device_board_oniro/releases/download/v1.0.0/oniro_emulator.zip";
+    const EMULATOR_DIR = getEmulatorDir();
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oniro-emulator-'));
+    const tmpZip = path.join(tmpDir, 'oniro_emulator.zip');
+    try {
+        fs.mkdirSync(EMULATOR_DIR, { recursive: true });
+        if (progress) progress.report?.({ message: 'Downloading emulator...', increment: 0 });
+        await downloadFile(EMULATOR_URL, tmpZip, progress, abortSignal);
+        if (progress) progress.report?.({ message: 'Extracting emulator...', increment: 0 });
+        await extractZip(tmpZip, { dir: EMULATOR_DIR });
+        const runSh = path.join(EMULATOR_DIR, 'images', 'run.sh');
+        if (fs.existsSync(runSh)) {
+            fs.chmodSync(runSh, 0o755);
+        }
+        if (progress) progress.report?.({ message: 'Cleaning up...', increment: 0 });
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch (err) {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        throw err;
+    }
+}
+
+/**
+ * Removes the Oniro emulator directory.
+ */
+export function removeEmulator(): void {
+    const EMULATOR_DIR = getEmulatorDir();
+    if (fs.existsSync(EMULATOR_DIR)) {
+        fs.rmSync(EMULATOR_DIR, { recursive: true, force: true });
+    }
 }
