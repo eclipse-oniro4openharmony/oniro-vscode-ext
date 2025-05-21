@@ -110,6 +110,22 @@
           "icon": "media/oniro-icon.svg"
         }
       ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Oniro IDE Configuration",
+      "properties": {
+        "oniro.sdkRootDir": {
+          "type": "string",
+          "default": "${userHome}/setup-ohos-sdk",
+          "description": "Root directory where OpenHarmony SDKs are installed."
+        },
+        "oniro.cmdToolsPath": {
+          "type": "string",
+          "default": "${userHome}/command-line-tools",
+          "description": "Directory where OpenHarmony command-line tools are installed."
+        }
+      }
     }
   },
   "scripts": {

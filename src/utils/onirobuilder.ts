@@ -4,7 +4,7 @@ import { oniroLogChannel } from './logger';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as json5 from 'json5';
-import { SDK_ROOT_DIR, CMD_TOOLS_PATH } from './sdkUtils';
+import { getSdkRootDir, getCmdToolsPath } from './sdkUtils';
 import * as os from 'os';
 import { generateSigningConfigs } from './generate_signing_configs';
 
@@ -79,8 +79,8 @@ export async function onirobuilderBuild(): Promise<void> {
 
   // Set up environment variables
   const osFolder = getOsFolder();
-  const env = { ...process.env, OHOS_BASE_SDK_HOME: path.join(SDK_ROOT_DIR, osFolder) };
-  const cmdToolsBin = path.join(CMD_TOOLS_PATH, 'bin');
+  const env = { ...process.env, OHOS_BASE_SDK_HOME: path.join(getSdkRootDir(), osFolder) };
+  const cmdToolsBin = path.join(getCmdToolsPath(), 'bin');
   const ohpmPath = path.join(cmdToolsBin, 'ohpm');
   let hvigorwPath = path.join(projectDir, 'hvigorw');
   if (!fs.existsSync(hvigorwPath)) {
@@ -116,7 +116,7 @@ export async function onirobuilderSign(): Promise<void> {
 
   // Determine OS folder for SDK path
   const osFolder = getOsFolder();
-  const env = { ...process.env, OHOS_BASE_SDK_HOME: path.join(SDK_ROOT_DIR, osFolder) };
+  const env = { ...process.env, OHOS_BASE_SDK_HOME: path.join(getSdkRootDir(), osFolder) };
 
   // Call the JS function directly instead of spawning a process
   try {

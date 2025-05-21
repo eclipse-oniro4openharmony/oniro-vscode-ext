@@ -17,9 +17,27 @@ export interface SdkInfo {
     installed: boolean;
 }
 
-export const SDK_ROOT_DIR = path.join(os.homedir(), 'setup-ohos-sdk');
-export const CMD_TOOLS_PATH = path.join(os.homedir(), 'command-line-tools');
-export const CMD_TOOLS_BIN = path.join(CMD_TOOLS_PATH, 'bin', 'ohpm');
+// Get Oniro SDK root and command tools path from configuration, with fallback to defaults
+function getOniroConfig<T = string>(key: string, fallback: T): T {
+    const config = vscode.workspace.getConfiguration('oniro');
+    let value = config.get<T>(key);
+    if (typeof value === 'string' && value.includes('${userHome}')) {
+        value = value.replace(/\$\{userHome\}/g, os.homedir()) as T;
+    }
+    return (value === undefined || value === null || value === "") ? fallback : value;
+}
+
+export function getSdkRootDir(): string {
+    return getOniroConfig('sdkRootDir', path.join(os.homedir(), 'setup-ohos-sdk'));
+}
+
+export function getCmdToolsPath(): string {
+    return getOniroConfig('cmdToolsPath', path.join(os.homedir(), 'command-line-tools'));
+}
+
+export function getCmdToolsBin(): string {
+    return path.join(getCmdToolsPath(), 'bin', 'ohpm');
+}
 
 export const ALL_SDKS = [
     { version: '4.0', api: '10' },
@@ -32,7 +50,7 @@ export const ALL_SDKS = [
 ];
 
 export function getInstalledSdks(): string[] {
-    const sdkRoot = SDK_ROOT_DIR;
+    const sdkRoot = getSdkRootDir();
     const versions = new Set<string>();
     if (!fs.existsSync(sdkRoot)) return [];
     for (const osFolder of ['linux', 'darwin', 'windows']) {
@@ -49,13 +67,13 @@ export function getInstalledSdks(): string[] {
 
 
 export function isCmdToolsInstalled(): boolean {
-    return fs.existsSync(CMD_TOOLS_BIN);
+    return fs.existsSync(getCmdToolsBin());
 }
 
 export function getCmdToolsStatus(): { installed: boolean, status: string } {
     if (isCmdToolsInstalled()) {
         try {
-            const version = require('child_process').execFileSync(CMD_TOOLS_BIN, ['-v'], { encoding: 'utf8' }).trim();
+            const version = require('child_process').execFileSync(getCmdToolsBin(), ['-v'], { encoding: 'utf8' }).trim();
             return { installed: true, status: `Installed (${version})` };
         } catch {
             return { installed: true, status: 'Installed (version unknown)' };
@@ -158,7 +176,7 @@ export async function downloadAndInstallSdk(version: string, api: string, progre
     const sha256Path = path.join(tmpDir, filename + '.sha256');
     const extractDir = path.join(tmpDir, 'extract');
     fs.mkdirSync(extractDir);
-    const sdkInstallDir = path.join(SDK_ROOT_DIR, osFolder, api);
+    const sdkInstallDir = path.join(getSdkRootDir(), osFolder, api);
     fs.mkdirSync(path.dirname(sdkInstallDir), { recursive: true });
     try {
         if (progress) progress.report?.({ message: 'Downloading SDK archive...', increment: 0 });
@@ -195,7 +213,7 @@ export async function downloadAndInstallSdk(version: string, api: string, progre
 }
 
 export async function installCmdTools(progress?: vscode.Progress<{message?: string, increment?: number}>, abortSignal?: AbortSignal): Promise<void> {
-    const CMD_PATH = CMD_TOOLS_PATH;
+    const CMD_PATH = getCmdToolsPath();
     const url = 'https://repo.huaweicloud.com/harmonyos/ohpm/5.0.5/commandline-tools-linux-x64-5.0.5.310.zip';
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oniro-cmdtools-'));
     const zipPath = path.join(tmpDir, 'oh-command-line-tools.zip');
@@ -232,8 +250,8 @@ export async function installCmdTools(progress?: vscode.Progress<{message?: stri
 }
 
 export function removeCmdTools(): void {
-    if (fs.existsSync(CMD_TOOLS_PATH)) {
-        fs.rmSync(CMD_TOOLS_PATH, { recursive: true, force: true });
+    if (fs.existsSync(getCmdToolsPath())) {
+        fs.rmSync(getCmdToolsPath(), { recursive: true, force: true });
     }
 }
 
@@ -245,7 +263,7 @@ export function removeSdk(api: string): boolean {
     const osFolders = ['linux', 'darwin', 'windows'];
     let removed = false;
     for (const osFolder of osFolders) {
-        const sdkPath = path.join(SDK_ROOT_DIR, osFolder, api);
+        const sdkPath = path.join(getSdkRootDir(), osFolder, api);
         if (fs.existsSync(sdkPath)) {
             fs.rmSync(sdkPath, { recursive: true, force: true });
             removed = true;
