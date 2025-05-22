@@ -28,39 +28,7 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 						if (hdcProcess) {
 							hdcProcess.kill();
 						}
-						const spawn = require('child_process').spawn;
-						// Map UI value to hilog -b argument
-						const severityMap: Record<string, string> = {
-							'DEBUG': 'DEBUG',
-							'INFO': 'INFO',
-							'WARN': 'WARN',
-							'ERROR': 'ERROR',
-							'FATAL': 'FATAL'
-						};
-						const level = severityMap[severity] || 'INFO';
-						// First set the buffer level
-						await new Promise<void>((resolve, reject) => {
-							const setLevel = spawn('${getHdcPath()}', ['shell', 'hilog', '-b', level]);
-							setLevel.on('close', () => resolve());
-							setLevel.on('error', reject);
-						});
-						// Then start log process
-						let hilogArgs = ['shell', 'hilog'];
-						if (processId && processId.trim() !== '') {
-							hilogArgs.push('-P', processId);
-						}
-						hdcProcess = spawn('${getHdcPath()}', hilogArgs);
-						if (hdcProcess) {
-							hdcProcess.stdout.on('data', (data: Buffer) => {
-								const lines = data.toString().split('\n').filter(Boolean);
-								for (const line of lines) {
-									panel.webview.postMessage({ command: 'log', line });
-								}
-							});
-							hdcProcess.stderr.on('data', (data: Buffer) => {
-								panel.webview.postMessage({ command: 'error', line: data.toString() });
-							});
-						}
+						hdcProcess = await startHilogProcess(processId, severity, panel);
 					}
 					if (message.command === 'stopLog' && hdcProcess) {
 						hdcProcess.kill();
@@ -98,6 +66,47 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 	);
 
 	context.subscriptions.push(showHilogViewerDisposable);
+}
+
+// Extracted function for starting hilog process
+async function startHilogProcess(
+	processId: string | undefined,
+	severity: string | 1,
+	panel: vscode.WebviewPanel
+): Promise<import('child_process').ChildProcessWithoutNullStreams | undefined> {
+	const spawn = require('child_process').spawn;
+	const severityMap: Record<string, string> = {
+		'DEBUG': 'DEBUG',
+		'INFO': 'INFO',
+		'WARN': 'WARN',
+		'ERROR': 'ERROR',
+		'FATAL': 'FATAL'
+	};
+	const level = severityMap[severity] || 'INFO';
+	// First set the buffer level
+	await new Promise<void>((resolve, reject) => {
+		const setLevel = spawn(`${getHdcPath()}`, ['shell', 'hilog', '-b', level]);
+		setLevel.on('close', () => resolve());
+		setLevel.on('error', reject);
+	});
+	// Then start log process
+	let hilogArgs = ['shell', 'hilog'];
+	if (processId && processId.trim() !== '') {
+		hilogArgs.push('-P', processId);
+	}
+	const hdcProcess = spawn(`${getHdcPath()}`, hilogArgs);
+	if (hdcProcess) {
+		hdcProcess.stdout.on('data', (data: Buffer) => {
+			const lines = data.toString().split('\n').filter(Boolean);
+			for (const line of lines) {
+				panel.webview.postMessage({ command: 'log', line });
+			}
+		});
+		hdcProcess.stderr.on('data', (data: Buffer) => {
+			panel.webview.postMessage({ command: 'error', line: data.toString() });
+		});
+	}
+	return hdcProcess;
 }
 
 function getHilogWebviewContent(context: vscode.ExtensionContext): string {
