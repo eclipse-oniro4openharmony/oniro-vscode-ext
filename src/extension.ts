@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { onirobuilderBuild, onirobuilderSign } from './utils/onirobuilder';
-import { startEmulator, stopEmulator, connectEmulator } from './utils/emulatorManager';
+import { startEmulator, stopEmulator, attemptHdcConnection } from './utils/emulatorManager';
 import { installApp, launchApp, findAppProcessId } from './utils/hdcManager';
 import { registerHilogViewerCommand } from './hilogViewer';
 import { oniroLogChannel } from './utils/logger';
@@ -34,7 +34,6 @@ export function activate(context: vscode.ExtensionContext) {
 	const startEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.START_EMULATOR, async () => {
 		try {
 			await startEmulator();
-			vscode.window.showInformationMessage('Emulator started successfully!');
 		} catch (err) {
 			vscode.window.showErrorMessage(`Failed to start emulator: ${err}`);
 		}
@@ -51,8 +50,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const connectEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.CONNECT_EMULATOR, async () => {
 		try {
-			await connectEmulator();
-			vscode.window.showInformationMessage('Emulator connected successfully!');
+			const connected = await attemptHdcConnection();
+			if (connected) {
+				vscode.window.showInformationMessage('Emulator connected successfully!');
+			} else {
+				throw new Error('Failed to connect emulator.');
+			}
 		} catch (err) {
 			vscode.window.showErrorMessage(`Failed to connect emulator: ${err}`);
 		}
@@ -87,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
 				progress.report({ message: 'Starting emulator...' });
 				await startEmulator();
 				progress.report({ message: 'Connecting to emulator...' });
-				await connectEmulator();
+				await attemptHdcConnection();
 				progress.report({ message: 'Building app...' });
 				await onirobuilderBuild();
 				progress.report({ message: 'Installing app...' });

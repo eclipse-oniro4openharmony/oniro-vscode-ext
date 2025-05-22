@@ -3,16 +3,19 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { oniroLogChannel } from './logger';
-import { getEmulatorDir } from './sdkUtils';
+import { getEmulatorDir, getHdcPath } from './sdkUtils';
 
 const emulatorChannel = oniroLogChannel;
 const PID_FILE = '/tmp/oniro_emulator.pid';
 
+/**
+ * Execute a shell command and log output.
+ */
 function execPromise(cmd: string, cwd?: string): Promise<void> {
   return new Promise((resolve, reject) => {
     exec(cmd, { cwd }, (error, stdout, stderr) => {
-      if (stdout) emulatorChannel.appendLine(`[emulator] stdout: ${stdout.trim()}`);
-      if (stderr) emulatorChannel.appendLine(`[emulator] stderr: ${stderr.trim()}`);
+      if (stdout?.trim()) emulatorChannel.appendLine(`[emulator] stdout: ${stdout.trim()}`);
+      if (stderr?.trim()) emulatorChannel.appendLine(`[emulator] stderr: ${stderr.trim()}`);
       if (error) {
         emulatorChannel.appendLine(`ERROR: [emulator] error: ${error.message}`);
         reject(error);
@@ -23,14 +26,30 @@ function execPromise(cmd: string, cwd?: string): Promise<void> {
   });
 }
 
-async function attemptHdcConnection(): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
-    exec('hdc start -r && hdc tconn 127.0.0.1:55555', (error, stdout, stderr) => {
-      if (stdout) emulatorChannel.appendLine(`[emulator] stdout: ${stdout.trim()}`);
-      if (stderr) emulatorChannel.appendLine(`[emulator] stderr: ${stderr.trim()}`);
-      resolve(!error && stdout.includes('Connect OK'));
+/**
+ * Try to connect HDC to the emulator.
+ * Returns true if connection is successful, false otherwise.
+ */
+export async function attemptHdcConnection(address: string = '127.0.0.1:55555'): Promise<boolean> {
+  try {
+    // Start hdc server and try to connect
+    await execPromise(`${getHdcPath()} start -r`);
+    await execPromise(`${getHdcPath()} tconn ${address}`);
+    // Check connection status
+    let connected = false;
+    await new Promise<void>((resolve) => {
+      exec(`${getHdcPath()} list targets`, (error, stdout, stderr) => {
+        if (stdout?.includes(address)) {
+          connected = true;
+        }
+        resolve();
+      });
     });
-  });
+    return connected;
+  } catch (err) {
+    emulatorChannel.appendLine(`ERROR: HDC connection attempt failed: ${(err as Error).message}`);
+    return false;
+  }
 }
 
 export async function startEmulator(): Promise<void> {
@@ -55,28 +74,35 @@ export async function startEmulator(): Promise<void> {
   }
   // Start emulator in background and store PID
   const emulatorImagesPath = path.join(getEmulatorDir(), 'images');
-  await execPromise(`(./run.sh & echo $! > ${PID_FILE})`, emulatorImagesPath);
+  await execPromise(`(./run.sh > /dev/null 2>&1 & echo $! > ${PID_FILE})`, emulatorImagesPath);
   emulatorChannel.appendLine(`Emulator started in background. PID stored in ${PID_FILE}`);
-  while (true) {
-    if (await attemptHdcConnection()) {
-      emulatorChannel.appendLine('HDC connected.');
-      break;
+
+  // Show progress while waiting for HDC connection
+  await vscode.window.withProgress({
+    title: 'Oniro Emulator: Connecting HDC',
+    location: vscode.ProgressLocation.Notification,
+    cancellable: true
+  }, async (progress, token) => {
+    while (true) {
+      if (token.isCancellationRequested) {
+        emulatorChannel.appendLine('HDC connection cancelled by user.');
+        return;
+      }
+      progress.report({ message: `Waiting for HDC connection...` });
+      if (await attemptHdcConnection()) {
+        vscode.window.showInformationMessage('HDC connected!');
+        break;
+      }
+      emulatorChannel.appendLine('Waiting for HDC connection...');
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
-    emulatorChannel.appendLine('Waiting for HDC connection...');
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-  }
+  });
 }
 
 export function stopEmulator(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Kill all qemu-system-x86_64 processes
-    exec('pkill -f qemu-system-x86_64', (error, stdout, stderr) => {
-      if (stdout) emulatorChannel.appendLine(`[emulator] stdout: ${stdout.trim()}`);
-      if (stderr) emulatorChannel.appendLine(`[emulator] stderr: ${stderr.trim()}`);
-      if (error) {
-        emulatorChannel.appendLine(`ERROR: Failed to kill qemu-system-x86_64 processes: ${error.message}`);
-        return reject(error);
-      }
+  return new Promise(async (resolve, reject) => {
+    try {
+      await execPromise('pkill -f qemu-system-x86_64');
       emulatorChannel.appendLine('All qemu-system-x86_64 processes killed.');
       // Remove the PID file if it exists
       fs.unlink(PID_FILE, (unlinkErr) => {
@@ -85,10 +111,9 @@ export function stopEmulator(): Promise<void> {
         }
         resolve();
       });
-    });
+    } catch (error) {
+      emulatorChannel.appendLine(`ERROR: Failed to kill qemu-system-x86_64 processes: ${(error as Error).message}`);
+      reject(error);
+    }
   });
-}
-
-export function connectEmulator(): Promise<void> {
-  return execPromise('hdc start -r && hdc tconn localhost:55555');
 }

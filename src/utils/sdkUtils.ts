@@ -38,6 +38,12 @@ export function getCmdToolsBin(): string {
     return path.join(getCmdToolsPath(), 'bin', 'ohpm');
 }
 
+// Helper to get the full hdc executable path
+export function getHdcPath(): string {
+  // hdc is located in ./sdk/default/openharmony/toolchains/hdc relative to getCmdToolsPath()
+  return path.join(getCmdToolsPath(), 'sdk', 'default', 'openharmony', 'toolchains', 'hdc');
+}
+
 export const ALL_SDKS = [
     { version: '4.0', api: '10' },
     { version: '4.1', api: '11' },
