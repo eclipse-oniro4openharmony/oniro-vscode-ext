@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { OniroCommands } from './OniroTreeDataProvider';
 import { getHdcPath } from './utils/sdkUtils';
+import { oniroLogChannel } from './utils/logger';
 
 export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 	const showHilogViewerDisposable = vscode.commands.registerCommand(
@@ -76,7 +77,29 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 	context.subscriptions.push(showHilogViewerDisposable);
 }
 
-// Extracted function for starting hilog process
+// Add log line parser
+function parseLogLine(line: string): {
+	time: string;
+	pid: string;
+	tid: string;
+	level: string;
+	tag: string;
+	message: string;
+} | null {
+	// Example: 05-19 22:35:37.818  3687  3712 E C01406/OHOS::RS: QueryEglBufferAge: eglQuerySurface is failed
+	const regex = /^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\s+(\d+)\s+(\d+)\s+([EWID])\s+([^:]+):\s*(.*)$/;
+	const match = line.match(regex);
+	if (!match) return null;
+	return {
+		time: match[1],
+		pid: match[2],
+		tid: match[3],
+		level: match[4],
+		tag: match[5],
+		message: match[6]
+	};
+}
+
 async function startHilogProcess(
 	processId: string | undefined,
 	severity: string | 1,
@@ -107,11 +130,18 @@ async function startHilogProcess(
 		hdcProcess.stdout.on('data', (data: Buffer) => {
 			const lines = data.toString().split('\n').filter(Boolean);
 			for (const line of lines) {
-				panel.webview.postMessage({ command: 'log', line });
+				const parsed = parseLogLine(line);
+				if (parsed) {
+					panel.webview.postMessage({ command: 'log', log: parsed });
+				} else {
+					// Log error to oniroLogChannel instead of webview
+					oniroLogChannel.appendLine(`[HiLog parse error] ${line}`);
+				}
 			}
 		});
 		hdcProcess.stderr.on('data', (data: Buffer) => {
-			panel.webview.postMessage({ command: 'error', line: data.toString() });
+			// Log error to oniroLogChannel instead of webview
+			oniroLogChannel.appendLine(`[HiLog stderr] ${data.toString()}`);
 		});
 	}
 	return hdcProcess;

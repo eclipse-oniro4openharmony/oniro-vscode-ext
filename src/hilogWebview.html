@@ -149,21 +149,6 @@
 		'F': 5  // FATAL (if present)
 	};
 
-	function parseLogLine(line) {
-		// Example: 05-19 22:35:37.818  3687  3712 E C01406/OHOS::RS: QueryEglBufferAge: eglQuerySurface is failed
-		const regex = /^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\s+(\d+)\s+(\d+)\s+([EWID])\s+([^:]+):\s*(.*)$/;
-		const match = line.match(regex);
-		if (!match) return null;
-		return {
-			time: match[1],
-			pid: match[2],
-			tid: match[3],
-			level: match[4],
-			tag: match[5],
-			message: match[6]
-		};
-	}
-
 	function levelColor(level) {
 		switch(level) {
 			case 'E': return 'level-error';
@@ -200,7 +185,6 @@
 
 	// --- Batching logic ---
 	const logBuffer = [];
-	const errorBuffer = [];
 	const FLUSH_INTERVAL = 50; // ms
 	const LOG_ROW_LIMIT = 2000; // Maximum number of log rows to keep
 
@@ -231,22 +215,6 @@
 				logTableBody.deleteRow(0);
 			}
 		}
-		if (errorBuffer.length > 0) {
-			const fragment = document.createDocumentFragment();
-			for (const err of errorBuffer) {
-				const tr = document.createElement('tr');
-				tr.innerHTML = `<td colspan="6" class="text-red-600">[ERROR] ${err}</td>`;
-				fragment.appendChild(tr);
-			}
-			logTableBody.appendChild(fragment);
-			errorBuffer.length = 0;
-			scrolled = true;
-
-			// Remove oldest rows if over limit (errors count as rows)
-			while (logTableBody.rows.length > LOG_ROW_LIMIT) {
-				logTableBody.deleteRow(0);
-			}
-		}
 		if (scrolled && stickToLatest) {
 			logTableContainer.scrollTop = logTableContainer.scrollHeight;
 		}
@@ -271,7 +239,8 @@
 			}
 		}
 		if (msg.command === 'log') {
-			const parsed = parseLogLine(msg.line);
+			// Now msg.log is already parsed
+			const parsed = msg.log;
 			if (!parsed) return;
 			// Severity filtering
 			const selectedSeverity = document.getElementById('severitySelect').value;
@@ -279,10 +248,6 @@
 			const logLevel = levelMap[parsed.level] || 1;
 			if (logLevel < minLevel) return;
 			logBuffer.push(parsed);
-			// DOM update is now batched
-		}
-		if (msg.command === 'error') {
-			errorBuffer.push(msg.line);
 			// DOM update is now batched
 		}
 		if (msg.command === 'streamingStarted') {
