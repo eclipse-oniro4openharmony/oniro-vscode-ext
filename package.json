@@ -9,7 +9,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["onDebug"],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -73,13 +73,8 @@
         "configurationAttributes": {
           "oniro-debug": {
             "properties": {
-              "appPackage": {
-                "type": "string",
-                "description": "Path to the .hap package to debug"
-              }
             },
             "required": [
-              "appPackage"
             ]
           }
         },
@@ -87,8 +82,7 @@
           {
             "name": "Launch Oniro App",
             "type": "oniro-debug",
-            "request": "launch",
-            "appPackage": "${workspaceFolder}/build/YourApp.hap"
+            "request": "launch"
           }
         ]
       }
