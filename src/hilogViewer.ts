@@ -27,12 +27,19 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 						const { processId, severity } = message;
 						if (hdcProcess) {
 							hdcProcess.kill();
+							panel.webview.postMessage({ command: 'streamingStopped' });
 						}
 						hdcProcess = await startHilogProcess(processId, severity, panel);
+						if (hdcProcess) {
+							panel.webview.postMessage({ command: 'streamingStarted' });
+						} else {
+							panel.webview.postMessage({ command: 'streamingStopped' });
+						}
 					}
 					if (message.command === 'stopLog' && hdcProcess) {
 						hdcProcess.kill();
 						hdcProcess = undefined;
+						panel.webview.postMessage({ command: 'streamingStopped' });
 					}
 				},
 				undefined,
@@ -60,6 +67,7 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 			panel.onDidDispose(() => {
 				if (hdcProcess) {
 					hdcProcess.kill();
+					panel.webview.postMessage({ command: 'streamingStopped' });
 				}
 			});
 		}

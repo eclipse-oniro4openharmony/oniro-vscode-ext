@@ -89,6 +89,30 @@
 	const vscode = acquireVsCodeApi();
 	let running = false;
 
+	// --- Feedback helpers ---
+	function setStreamingState(isStreaming) {
+		const startBtn = document.getElementById('startBtn');
+		const stopBtn = document.getElementById('stopBtn');
+		if (isStreaming) {
+			startBtn.disabled = true;
+			startBtn.classList.add('opacity-60', 'cursor-not-allowed');
+			startBtn.textContent = 'Streaming...';
+			stopBtn.disabled = false;
+			stopBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+			stopBtn.textContent = 'Stop';
+		} else {
+			startBtn.disabled = false;
+			startBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+			startBtn.textContent = 'Start';
+			stopBtn.disabled = true;
+			stopBtn.classList.add('opacity-60', 'cursor-not-allowed');
+			stopBtn.textContent = 'Stopped';
+		}
+	}
+
+	// Set initial state
+	setStreamingState(false);
+
 	// Signal to extension that webview is ready to receive initial data
 	window.addEventListener('DOMContentLoaded', () => {
 		vscode.postMessage({ command: 'webviewReady' });
@@ -101,10 +125,12 @@
 		document.getElementById('logTableBody').innerHTML = '';
 		vscode.postMessage({ command: 'startLog', processId, severity });
 		running = true;
+		setStreamingState(true);
 	};
 	document.getElementById('stopBtn').onclick = () => {
 		vscode.postMessage({ command: 'stopLog' });
 		running = false;
+		setStreamingState(false);
 	};
 
 	// Map severity select value to log level order
@@ -241,6 +267,7 @@
 				document.getElementById('logTableBody').innerHTML = '';
 				vscode.postMessage({ command: 'startLog', processId: msg.processId, severity: msg.severity || 'INFO' });
 				running = true;
+				setStreamingState(true);
 			}
 		}
 		if (msg.command === 'log') {
@@ -257,6 +284,12 @@
 		if (msg.command === 'error') {
 			errorBuffer.push(msg.line);
 			// DOM update is now batched
+		}
+		if (msg.command === 'streamingStarted') {
+			setStreamingState(true);
+		}
+		if (msg.command === 'streamingStopped') {
+			setStreamingState(false);
 		}
 	});
 	</script>
