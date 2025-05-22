@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { OniroCommands } from './OniroTreeDataProvider';
+import { getHdcPath } from './utils/sdkUtils';
 
 export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 	const showHilogViewerDisposable = vscode.commands.registerCommand(
@@ -39,7 +40,7 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 						const level = severityMap[severity] || 'INFO';
 						// First set the buffer level
 						await new Promise<void>((resolve, reject) => {
-							const setLevel = spawn('hdc', ['shell', 'hilog', '-b', level]);
+							const setLevel = spawn('${getHdcPath()}', ['shell', 'hilog', '-b', level]);
 							setLevel.on('close', () => resolve());
 							setLevel.on('error', reject);
 						});
@@ -48,7 +49,7 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 						if (processId && processId.trim() !== '') {
 							hilogArgs.push('-P', processId);
 						}
-						hdcProcess = spawn('hdc', hilogArgs);
+						hdcProcess = spawn('${getHdcPath()}', hilogArgs);
 						if (hdcProcess) {
 							hdcProcess.stdout.on('data', (data: Buffer) => {
 								const lines = data.toString().split('\n').filter(Boolean);

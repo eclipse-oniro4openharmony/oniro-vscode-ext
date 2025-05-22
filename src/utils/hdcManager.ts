@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { oniroLogChannel } from './logger';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as util from 'util';
+import { getHdcPath } from './sdkUtils';
 
 const hdcChannel = oniroLogChannel;
 
@@ -83,7 +83,7 @@ export async function installApp(): Promise<void> {
     throw new Error('No signed .hap file found in entry/build/default/outputs/default/. Please build and sign your app first.');
   }
   const hapPath = path.join(hapDir, hapFile);
-  return execPromise(`hdc install "${hapPath}"`);
+  return execPromise(`${getHdcPath()} install "${hapPath}"`);
 }
 
 /**
@@ -98,7 +98,7 @@ export async function launchApp(): Promise<void> {
   const projectDir = workspaceFolders[0].uri.fsPath;
   const bundleName = getBundleName(projectDir);
   const mainAbility = getMainAbility(projectDir);
-  return execPromise(`hdc shell aa start -a ${mainAbility} -b ${bundleName}`);
+  return execPromise(`${getHdcPath()} shell aa start -a ${mainAbility} -b ${bundleName}`);
 }
 
 /**
@@ -108,7 +108,7 @@ export async function findAppProcessId(projectDir: string): Promise<string> {
   const bundleName = getBundleName(projectDir);
   return new Promise<string>((resolve, reject) => {
     const { spawn } = require('child_process');
-    const proc = spawn('hdc', ['track-jpid']);
+    const proc = spawn(getHdcPath(), ['track-jpid']);
     proc.stdout.on('data', (data: Buffer) => {
       const lines = data.toString().split('\n').filter(Boolean);
       for (const line of lines) {
