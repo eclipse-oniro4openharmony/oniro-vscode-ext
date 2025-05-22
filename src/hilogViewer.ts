@@ -127,20 +127,31 @@ async function startHilogProcess(
 	}
 	const hdcProcess = spawn(`${getHdcPath()}`, hilogArgs);
 	if (hdcProcess) {
+		let leftover = '';
 		hdcProcess.stdout.on('data', (data: Buffer) => {
-			const lines = data.toString().split('\n').filter(Boolean);
+			const chunk = leftover + data.toString();
+			const lines = chunk.split('\n');
+			leftover = lines.pop() || ''; // Save incomplete line for next chunk
 			for (const line of lines) {
 				const parsed = parseLogLine(line);
 				if (parsed) {
 					panel.webview.postMessage({ command: 'log', log: parsed });
 				} else {
-					// Log error to oniroLogChannel instead of webview
 					oniroLogChannel.appendLine(`[HiLog parse error] ${line}`);
 				}
 			}
 		});
+		hdcProcess.stdout.on('end', () => {
+			if (leftover) {
+				const parsed = parseLogLine(leftover);
+				if (parsed) {
+					panel.webview.postMessage({ command: 'log', log: parsed });
+				} else {
+					oniroLogChannel.appendLine(`[HiLog parse error] ${leftover}`);
+				}
+			}
+		});
 		hdcProcess.stderr.on('data', (data: Buffer) => {
-			// Log error to oniroLogChannel instead of webview
 			oniroLogChannel.appendLine(`[HiLog stderr] ${data.toString()}`);
 		});
 	}
