@@ -36,6 +36,15 @@
 		.level-debug { color: var(--vscode-success); }
 		.level-default { color: var(--vscode-fg); }
 		.text-red-600 { color: var(--vscode-error) !important; }
+
+		/* Reduce vertical space between log lines */
+		#logTable th, #logTable td {
+			padding-top: 2px !important;
+			padding-bottom: 2px !important;
+		}
+		#logTable {
+			border-spacing: 0 1px !important; /* minimal row spacing */
+		}
 	</style>
 </head>
 <body>
