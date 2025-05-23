@@ -212,6 +212,13 @@ export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
         // Send initial state
         updateState();
 
+        // Listen for when the webview becomes visible again
+        panel.onDidChangeViewState(() => {
+            if (panel.visible) {
+                updateState();
+            }
+        });
+
         panel.webview.onDidReceiveMessage(
             async message => {
                 const handler = messageHandlers[message.command];
