@@ -9,6 +9,7 @@ import { oniroLogChannel } from './utils/logger';
 import { OniroTreeDataProvider, OniroCommands } from './OniroTreeDataProvider';
 import { registerSdkManagerCommand } from './sdkManager';
 import { OniroDebugConfigurationProvider } from './providers/OniroDebugConfigurationProvider';
+import { OniroTaskProvider } from './oniroTaskProvider';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -137,6 +138,11 @@ export function activate(context: vscode.ExtensionContext) {
 			'oniro-debug',
 			new OniroDebugConfigurationProvider()
 		)
+	);
+
+	// Register Oniro Task Provider
+	context.subscriptions.push(
+		vscode.tasks.registerTaskProvider('oniro', new OniroTaskProvider())
 	);
 
 	registerHilogViewerCommand(context);
