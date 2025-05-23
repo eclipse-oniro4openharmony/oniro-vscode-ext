@@ -9,7 +9,7 @@ import { oniroLogChannel } from './utils/logger';
 import { OniroTreeDataProvider, OniroCommands } from './OniroTreeDataProvider';
 import { registerSdkManagerCommand } from './sdkManager';
 import { OniroDebugConfigurationProvider } from './providers/OniroDebugConfigurationProvider';
-import { OniroTaskProvider } from './oniroTaskProvider';
+import { OniroTaskProvider } from './providers/oniroTaskProvider';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
