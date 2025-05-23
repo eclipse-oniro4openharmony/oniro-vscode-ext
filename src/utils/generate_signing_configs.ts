@@ -4,15 +4,8 @@ import { execSync } from "child_process";
 import { encryptPwd, createMaterial } from './encrypt_key';
 import * as json5 from "json5";
 
-// Define constants for SDK paths
-const SDK_HOME: string = process.env.OHOS_BASE_SDK_HOME || "";
-const SIGN_TOOL_PATH = path.join(SDK_HOME, "12/toolchains/lib/hap-sign-tool.jar");
-const KEYSTORE_FILE = path.join(SDK_HOME, "12/toolchains/lib/OpenHarmony.p12");
-const PROFILE_CERT_FILE = path.join(SDK_HOME, "12/toolchains/lib/OpenHarmonyProfileRelease.pem");
-const UNSIGNED_PROFILE_TEMPLATE = path.join(SDK_HOME, "12/toolchains/lib/UnsgnedReleasedProfileTemplate.json");
-
 // Function to copy necessary files to the project directory
-function copyFilesToProject(projectDir: string): void {
+function copyFilesToProject(projectDir: string, KEYSTORE_FILE: string, PROFILE_CERT_FILE: string, UNSIGNED_PROFILE_TEMPLATE: string): void {
     console.log("Copying files to project directory...");
     const signaturesDir = path.join(projectDir, "signatures");
     fs.mkdirSync(signaturesDir, { recursive: true });
@@ -78,7 +71,7 @@ function modifyProfileTemplate(projectDir: string): void {
 }
 
 // Function to generate the P7b file using the signing tool
-function generateP7bFile(projectDir: string): void {
+function generateP7bFile(projectDir: string, SIGN_TOOL_PATH: string, PROFILE_CERT_FILE: string, KEYSTORE_FILE: string): void {
     console.log("Generating P7b file...");
     const signaturesDir = path.join(projectDir, "signatures");
     const profileTemplatePath = path.join(signaturesDir, "UnsgnedReleasedProfileTemplate.json");
@@ -154,16 +147,25 @@ function prepareMaterialDirectory(projectDir: string): void {
 }
 
 // Main function to orchestrate the signing configuration generation
-export function generateSigningConfigs(projectDir?: string): void {
+export function generateSigningConfigs(projectDir?: string, SDK_HOME?: string): void {
     if (!projectDir) {
         console.log("No project directory provided. Using the current directory.");
         projectDir = process.cwd();
     }
+    if (!SDK_HOME) {
+        throw new Error("SDK_HOME must be provided.");
+    }
+
+    // Define constants for SDK paths inside the function
+    const SIGN_TOOL_PATH = path.join(SDK_HOME, "12/toolchains/lib/hap-sign-tool.jar");
+    const KEYSTORE_FILE = path.join(SDK_HOME, "12/toolchains/lib/OpenHarmony.p12");
+    const PROFILE_CERT_FILE = path.join(SDK_HOME, "12/toolchains/lib/OpenHarmonyProfileRelease.pem");
+    const UNSIGNED_PROFILE_TEMPLATE = path.join(SDK_HOME, "12/toolchains/lib/UnsgnedReleasedProfileTemplate.json");
 
     console.log("Starting signing configuration generation...");
-    copyFilesToProject(projectDir);
+    copyFilesToProject(projectDir, KEYSTORE_FILE, PROFILE_CERT_FILE, UNSIGNED_PROFILE_TEMPLATE);
     modifyProfileTemplate(projectDir);
-    generateP7bFile(projectDir);
+    generateP7bFile(projectDir, SIGN_TOOL_PATH, PROFILE_CERT_FILE, KEYSTORE_FILE);
     prepareMaterialDirectory(projectDir);
     updateBuildProfile(projectDir);
 
@@ -173,5 +175,10 @@ export function generateSigningConfigs(projectDir?: string): void {
 // If run directly, execute main logic
 if (require.main === module) {
     const projectDir = process.argv[2];
-    generateSigningConfigs(projectDir);
+    const SDK_HOME = process.env.OHOS_BASE_SDK_HOME || "";
+    if (!SDK_HOME) {
+        console.error("Error: OHOS_BASE_SDK_HOME environment variable is not set.");
+        process.exit(1);
+    }
+    generateSigningConfigs(projectDir, SDK_HOME);
 }

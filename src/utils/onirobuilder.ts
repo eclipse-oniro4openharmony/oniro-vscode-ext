@@ -83,17 +83,12 @@ export async function onirobuilderBuild(): Promise<void> {
 export async function onirobuilderSign(): Promise<void> {
   logChannel.appendLine(`[onirobuilder] onirobuilderSign called`);
 
-  // Determine OS folder for SDK path
-  const env = { ...process.env, OHOS_BASE_SDK_HOME: getOhosBaseSdkHome() };
-
   // Call the JS function directly instead of spawning a process
   try {
     logChannel.appendLine(`[onirobuilder] Generating signing configs using generateSigningConfigs...`);
-    // Set the environment variable for the script
-    process.env.OHOS_BASE_SDK_HOME = env.OHOS_BASE_SDK_HOME;
     await new Promise<void>((resolve, reject) => {
       try {
-        generateSigningConfigs(projectDir);
+        generateSigningConfigs(projectDir, getOhosBaseSdkHome());
         resolve();
       } catch (err) {
         logChannel.appendLine(`[onirobuilder] Error generating signing configs: ${err}`);
