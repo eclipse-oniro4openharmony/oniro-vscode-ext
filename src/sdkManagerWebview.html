@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oniro SDK Manager</title>
     <style>
+        /* ...existing styles... */
         body {
             font-family: var(--vscode-font-family);
             background: var(--vscode-editor-background);
@@ -94,10 +95,6 @@
             margin-right: 8px;
             vertical-align: middle;
         }
-        @media (max-width: 600px) {
-            .sdk-item { flex-direction: column; align-items: stretch; gap: 10px; }
-            .sdk-actions { align-items: stretch; min-width: 0; }
-        }
         .main-flex-container {
             display: flex;
             flex-direction: row;
@@ -113,25 +110,21 @@
             min-width: 320px;
             max-width: 520px;
         }
-        .cmd-tools-section {
-            margin-top: 0;
-        }
         @media (max-width: 1100px) {
             .main-flex-container { flex-direction: column; gap: 24px; align-items: center; }
             .sdk-list, .cmd-tools-section { max-width: 520px; min-width: 0; width: 100%; }
-            .cmd-tools-section { margin-top: 0; }
         }
-        .sdk-list, .cmd-tools-section {
-            box-sizing: border-box;
+        @media (max-width: 600px) {
+            .sdk-item { flex-direction: column; align-items: stretch; gap: 10px; }
+            .sdk-actions { align-items: stretch; min-width: 0; }
         }
-        .cmd-tools-item, .cmd-tools-info, .cmd-tools-title, .cmd-tools-status, .cmd-tools-actions { display: unset !important; background: unset !important; border: unset !important; box-shadow: unset !important; padding: unset !important; margin: unset !important; font-size: unset !important; color: unset !important; font-weight: unset !important; }
     </style>
 </head>
 <body>
     <h2>Oniro SDK Manager</h2>
     <div class="main-flex-container">
-        <div class="sdk-list">
-            <!-- SDK_LIST_PLACEHOLDER -->
+        <div class="sdk-list" id="sdk-list">
+            <!-- Will be populated by JavaScript -->
         </div>
         <div class="cmd-tools-section">
             <div class="sdk-item">
@@ -144,66 +137,99 @@
                     <button id="cmd-tools-remove" class="remove" style="display:none">Remove</button>
                 </div>
             </div>
-            <!-- Emulator Card Start -->
-            <div class="sdk-item" style="margin-top:18px;">
+            <div class="sdk-item">
                 <div class="sdk-info">
                     <span class="sdk-version">Oniro Emulator</span>
-                    <span class="sdk-status" id="emulator-status">Not installed</span>
+                    <span class="sdk-status" id="emulator-status">Checking...</span>
                 </div>
                 <div class="sdk-actions">
-                    <button id="emulator-install">Install</button>
+                    <button id="emulator-install" style="display:none">Install</button>
                     <button id="emulator-remove" class="remove" style="display:none">Remove</button>
                 </div>
             </div>
-            <!-- Emulator Card End -->
         </div>
     </div>
     <script>
         const vscode = acquireVsCodeApi();
-        function downloadSdk(version, api) {
-            vscode.postMessage({ command: 'downloadSdk', version, api });
-        }
-        function removeSdk(version, api) {
-            vscode.postMessage({ command: 'removeSdk', version, api });
-        }
-        // Command line tools UI logic
-        window.addEventListener('DOMContentLoaded', () => {
-            vscode.postMessage({ command: 'checkCmdTools' });
-            vscode.postMessage({ command: 'checkEmulator' });
-            function updateEmulatorUI(installed, statusText) {
-                document.getElementById('emulator-status').textContent = statusText || (installed ? 'Installed' : 'Not installed');
-                document.getElementById('emulator-install').style.display = installed ? 'none' : '';
-                document.getElementById('emulator-remove').style.display = installed ? '' : 'none';
-                document.getElementById('emulator-install').disabled = false;
-                document.getElementById('emulator-remove').disabled = false;
+        
+        class SdkManagerUI {
+            constructor() {
+                this.setupEventListeners();
             }
-            document.getElementById('emulator-install').onclick = () => {
-                updateEmulatorUI(false, 'Installing...');
-                document.getElementById('emulator-install').disabled = true;
-                vscode.postMessage({ command: 'installEmulator' });
-            };
-            document.getElementById('emulator-remove').onclick = () => {
-                updateEmulatorUI(true, 'Removing...');
-                document.getElementById('emulator-remove').disabled = true;
-                vscode.postMessage({ command: 'removeEmulator' });
-            };
-            window.addEventListener('message', event => {
-                const msg = event.data;
-                if (msg.type === 'cmdToolsStatus') {
-                    document.getElementById('cmd-tools-status').textContent = msg.status;
-                    document.getElementById('cmd-tools-install').style.display = msg.installed ? 'none' : '';
-                    document.getElementById('cmd-tools-remove').style.display = msg.installed ? '' : 'none';
-                } else if (msg.type === 'emulatorStatus') {
-                    updateEmulatorUI(msg.installed, msg.status);
-                }
-            });
-            document.getElementById('cmd-tools-install').onclick = () => {
-                vscode.postMessage({ command: 'installCmdTools' });
-            };
-            document.getElementById('cmd-tools-remove').onclick = () => {
-                vscode.postMessage({ command: 'removeCmdTools' });
-            };
-        });
+
+            setupEventListeners() {
+                window.addEventListener('message', (event) => {
+                    const message = event.data;
+                    if (message.type === 'stateUpdate') {
+                        this.updateUI(message.state);
+                    }
+                });
+
+                // Command line tools
+                document.getElementById('cmd-tools-install').onclick = () => {
+                    vscode.postMessage({ command: 'installCmdTools' });
+                };
+                document.getElementById('cmd-tools-remove').onclick = () => {
+                    vscode.postMessage({ command: 'removeCmdTools' });
+                };
+
+                // Emulator
+                document.getElementById('emulator-install').onclick = () => {
+                    vscode.postMessage({ command: 'installEmulator' });
+                };
+                document.getElementById('emulator-remove').onclick = () => {
+                    vscode.postMessage({ command: 'removeEmulator' });
+                };
+            }
+
+            updateUI(state) {
+                this.updateSDKList(state.sdks);
+                this.updateCmdTools(state.cmdTools);
+                this.updateEmulator(state.emulator);
+            }
+
+            updateSDKList(sdks) {
+                const container = document.getElementById('sdk-list');
+                container.innerHTML = sdks.map(sdk => `
+                    <div class="sdk-item">
+                        <div class="sdk-info">
+                            <span class="sdk-version">OpenHarmony ${sdk.version}</span>
+                            <span class="sdk-api">API Level ${sdk.api}</span>
+                            <span class="sdk-status">${sdk.installed ? 'Installed' : 'Not installed'}</span>
+                        </div>
+                        <div class="sdk-actions">
+                            <input type="checkbox" class="sdk-checkbox" id="sdk-${sdk.version}" ${sdk.installed ? 'checked' : ''} disabled />
+                            ${sdk.installed
+                                ? `<button class="remove" onclick="sdkManager.removeSdk('${sdk.version}', '${sdk.api}')">Remove</button>`
+                                : `<button onclick="sdkManager.downloadSdk('${sdk.version}', '${sdk.api}')">Download</button>`
+                            }
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            updateCmdTools(cmdTools) {
+                document.getElementById('cmd-tools-status').textContent = cmdTools.status;
+                document.getElementById('cmd-tools-install').style.display = cmdTools.installed ? 'none' : '';
+                document.getElementById('cmd-tools-remove').style.display = cmdTools.installed ? '' : 'none';
+            }
+
+            updateEmulator(emulator) {
+                document.getElementById('emulator-status').textContent = emulator.status;
+                document.getElementById('emulator-install').style.display = emulator.installed ? 'none' : '';
+                document.getElementById('emulator-remove').style.display = emulator.installed ? '' : 'none';
+            }
+
+            downloadSdk(version, api) {
+                vscode.postMessage({ command: 'downloadSdk', version, api });
+            }
+
+            removeSdk(version, api) {
+                vscode.postMessage({ command: 'removeSdk', version, api });
+            }
+        }
+
+        const sdkManager = new SdkManagerUI();
     </script>
 </body>
 </html>

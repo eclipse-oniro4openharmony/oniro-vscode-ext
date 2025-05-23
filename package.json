@@ -1,7 +1,7 @@
 {
   "name": "oniro-ide",
   "displayName": "Oniro IDE",
-  "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development, streamlining common tasks such as:",
+  "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.100.0"
