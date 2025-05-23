@@ -26,8 +26,21 @@ function getOniroConfig<T = string>(key: string, fallback: T): T {
     return (value === undefined || value === null || value === "") ? fallback : value;
 }
 
+// Determine OS folder for SDK path
+function getOsFolder(): string {
+  const platform = os.platform();
+  if (platform === 'linux') return 'linux';
+  if (platform === 'darwin') return 'darwin';
+  if (platform === 'win32') return 'windows';
+  throw new Error('Unsupported OS');
+}
+
 export function getSdkRootDir(): string {
     return getOniroConfig('sdkRootDir', path.join(os.homedir(), 'setup-ohos-sdk'));
+}
+
+export function getOhosBaseSdkHome(): string {
+    return path.join(getSdkRootDir(), getOsFolder());
 }
 
 export function getCmdToolsPath(): string {
