@@ -167,25 +167,32 @@ export async function extractTarball(tarPath: string, dest: string, strip: numbe
     await tar.x({ file: tarPath, cwd: dest, strip });
 }
 
-export function getSdkFilename(): { filename: string, osFolder: string, strip: number } {
+export function getSdkFilename(version?: string): { filename: string, osFolder: string, strip: number } {
     const platform = os.platform();
+    // Default to latest if version not provided
+    const v = version || ALL_SDKS[ALL_SDKS.length - 1].version;
     if (platform === 'linux') {
-        return { filename: 'ohos-sdk-windows_linux-public.tar.gz', osFolder: 'linux', strip: 1 };
+        // For 5.0.0 and 5.0.1, do not strip components
+        const strip = (v === '5.0.0' || v === '5.0.1') ? 0 : 1;
+        return { filename: 'ohos-sdk-windows_linux-public.tar.gz', osFolder: 'linux', strip };
     } else if (platform === 'darwin') {
+        // Always strip 3 for mac
         if (os.arch() === 'arm64') {
             return { filename: 'L2-SDK-MAC-M1-PUBLIC.tar.gz', osFolder: 'darwin', strip: 3 };
         } else {
             return { filename: 'ohos-sdk-mac-public.tar.gz', osFolder: 'darwin', strip: 3 };
         }
     } else if (platform === 'win32') {
-        return { filename: 'ohos-sdk-windows_linux-public.tar.gz', osFolder: 'windows', strip: 1 };
+        // For 5.0.0 and 5.0.1, do not strip components
+        const strip = (v === '5.0.0' || v === '5.0.1') ? 0 : 1;
+        return { filename: 'ohos-sdk-windows_linux-public.tar.gz', osFolder: 'windows', strip };
     } else {
         throw new Error('Unsupported OS');
     }
 }
 
 export async function downloadAndInstallSdk(version: string, api: string, progress?: vscode.Progress<{message?: string, increment?: number}>, abortSignal?: AbortSignal): Promise<void> {
-    const { filename, osFolder, strip } = getSdkFilename();
+    const { filename, osFolder, strip } = getSdkFilename(version);
     const urlBase = 'https://repo.huaweicloud.com/openharmony/os';
     const downloadUrl = `${urlBase}/${version}-Release/${filename}`;
     const sha256Url = `${downloadUrl}.sha256`;
