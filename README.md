@@ -1,20 +1,27 @@
-# oniro-ide README
+# Oniro IDE
 
-This is the README for your extension "oniro-ide". After writing up a brief description, we recommend including the following sections.
+Oniro IDE is a lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development. It provides a streamlined workflow for building, signing, deploying, running, and debugging Oniro apps, as well as managing SDKs and emulators.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Oniro Tree View**: Access all Oniro development actions from a dedicated sidebar, including build, sign, emulator control, app install/launch, SDK Manager, and HiLog Viewer.
+- **Build and Sign**: Compile and sign your Oniro/OpenHarmony application with a single command.
+- **Emulator Management**: Start, stop, and connect to the Oniro emulator directly from VS Code.
+- **App Deployment**: Install and launch `.hap` packages on the emulator or connected device.
+- **Run All**: One-click workflow to start the emulator, build, install, and launch your app, then open the HiLog Viewer for live logs.
+- **HiLog Viewer**: View and filter real-time logs from your running Oniro app within VS Code.
+- **SDK Manager**: Install, update, or remove OpenHarmony SDKs, command-line tools, and the Oniro emulator via a graphical interface.
+- **Oniro Tasks**: Run Oniro-specific build tasks from the VS Code task system.
+- **Debugging**: Debug Oniro applications using the "Oniro Debug" configuration.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Node.js (LTS recommended)
+- Java SDK (for building/signing apps)
+- Required native tools (as per Oniro/OpenHarmony SDK requirements)
+- Oniro/OpenHarmony SDK (managed via the SDK Manager)
+
+Ensure all dependencies are installed and available in your `PATH`.
 
 ## Installation
 
@@ -27,7 +34,7 @@ If you have any requirements or dependencies, add a section describing those and
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/oniro-ide.git
+git clone https://github.com/frankplus/oniro-ide
 cd oniro-ide
 
 # Install dependencies and build
@@ -42,67 +49,61 @@ code .
 ## Usage
 
 1. Install and enable the Oniro IDE extension in VS Code.
-2. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`).
-4. Use **Oniro IDE: Build and Sign** (`oniro-ide.buildAndSign`) to compile and sign your application.
-5. Start the emulator via **Oniro IDE: Start Emulator** (`oniro-ide.startEmulator`) before deploying or testing your app.
-6. When finished, stop the emulator with **Oniro IDE: Stop Emulator** (`oniro-ide.stopEmulator`).
-7. Install your `.hap` package on the emulator or device using **Oniro IDE: Install App** (`oniro-ide.installApp`).
-8. Launch your application with **Oniro IDE: Launch App** (`oniro-ide.launchApp`).
-9. View and run predefined Oniro tasks by opening the **Run Task** menu (`Ctrl+Shift+P` → `Tasks: Run Task`) and selecting an Oniro task.
-10. Debug your application by choosing the **Oniro Debug** configuration in the Run view and starting a debug session.
+2. Use the Oniro sidebar to access all main actions, or open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and search for Oniro commands.
+3. Typical workflow:
+   - **SDK & Tools Setup**: Open the **SDK Manager** from the sidebar to install or update the required OpenHarmony SDKs, command-line tools, and the Oniro emulator before starting development.
+   - **Signature Configs**: If your application does not already have signing configurations, generate them using the Oniro IDE (see sidebar or command palette for signature config generation commands).
+   - **Build and Sign**: Use **Oniro: Build App** and **Oniro: Sign App** to prepare your application.
+   - **Emulator**: Start the emulator with **Oniro: Start Emulator** and connect if needed (**Oniro: Connect Emulator**).
+   - **Deploy**: Install your `.hap` package using **Oniro: Install App** and launch it with **Oniro: Launch App**.
+   - **Run All**: Use **Oniro: Run All (Emulator, Build, Install, Launch)** for a full automated flow, including log streaming.
+   - **HiLog Viewer**: View logs for your running app with **Oniro: Show HiLog Viewer**.
 
-Make sure you have all dependencies (Node.js, Java SDK, and required native tools) installed and configured in your PATH to ensure each command runs successfully.
+## Available Commands
+
+- `oniro-ide.runAll`: Run all steps (start emulator, build, install, launch, and open HiLog Viewer)
+- `oniro-ide.build`: Build the Oniro app
+- `oniro-ide.sign`: Sign the Oniro app
+- `oniro-ide.startEmulator`: Start the Oniro emulator
+- `oniro-ide.stopEmulator`: Stop the Oniro emulator
+- `oniro-ide.connectEmulator`: Connect to the running emulator
+- `oniro-ide.installApp`: Install the app on the emulator/device
+- `oniro-ide.launchApp`: Launch the app on the emulator/device
+- `oniro-ide.openSdkManager`: Open the Oniro SDK Manager
+- `oniro-ide.showHilogViewer`: Open the Oniro HiLog log viewer
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension contributes the following settings (see VS Code settings for details):
 
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- `oniro.sdkRootDir`: Root directory where OpenHarmony SDKs are installed. Default: `${userHome}/setup-ohos-sdk`
+- `oniro.cmdToolsPath`: Directory where OpenHarmony command-line tools are installed. Default: `${userHome}/command-line-tools`
+- `oniro.emulatorDir`: Directory where Oniro emulator is installed. Default: `${userHome}/oniro-emulator`
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- The commands are developed and verified only for the Linux environments
+- Please report issues and feature requests via the GitHub repository.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
+### 0.0.1
+Initial release: Oniro Tree View, build/sign/deploy workflow, emulator management, SDK Manager, HiLog Viewer, and debugging support.
 
 ## Following extension guidelines
 
 Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
 
 ## For more information
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+- [Visual Studio Code's Extension API](https://code.visualstudio.com/api)
+- [Oniro Project](https://oniroproject.org/)
+- [OpenHarmony Documentation](https://www.openharmony.cn/en/)
 
-**Enjoy!**
+## ArkTS Language Integration
+
+For additional integration for the ArkTS language, use the [ArkTS VS Code plugin](https://github.com/Groupguanfang/arkTS), which supports source code navigation and completion. It also supports codelinter to detect errors.
+
+**Enjoy developing with Oniro IDE!**
