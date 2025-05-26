@@ -2,6 +2,8 @@
 
 Oniro IDE is a lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development. It provides a streamlined workflow for building, signing, deploying, running, and debugging Oniro apps, as well as managing SDKs and emulators.
 
+![screencast](./media/screencast_readme.gif)
+
 ## Features
 
 - **Oniro Tree View**: Access all Oniro development actions from a dedicated sidebar, including build, sign, emulator control, app install/launch, SDK Manager, and HiLog Viewer.
@@ -85,6 +87,29 @@ This extension contributes the following settings (see VS Code settings for deta
 - The commands are developed and verified only for the Linux environments
 - Please report issues and feature requests via the GitHub repository.
 
+## Suggested `launch.json` Configuration
+
+To allow the integrated F5 launch shortcut to automatically execute the Oniro "Run All" workflow, add the following configuration to your `.vscode/launch.json` file:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Oniro: Launch App (with Run All)",
+            "type": "oniro-debug",
+            "request": "launch"
+        }
+    ]
+}
+```
+
+This will let you use F5 or the "Run" button in VS Code to trigger the Oniro "Run All" command for building, deploying, and launching your app.
+
+## ArkTS Language Integration
+
+For additional integration for the ArkTS language, use the [ArkTS VS Code plugin](https://github.com/Groupguanfang/arkTS), which supports source code navigation and completion. It also supports codelinter to detect errors.
+
 ## Release Notes
 
 ### 0.0.1
@@ -102,8 +127,5 @@ Ensure that you've read through the extensions guidelines and follow the best pr
 - [Oniro Project](https://oniroproject.org/)
 - [OpenHarmony Documentation](https://www.openharmony.cn/en/)
 
-## ArkTS Language Integration
-
-For additional integration for the ArkTS language, use the [ArkTS VS Code plugin](https://github.com/Groupguanfang/arkTS), which supports source code navigation and completion. It also supports codelinter to detect errors.
 
 **Enjoy developing with Oniro IDE!**
