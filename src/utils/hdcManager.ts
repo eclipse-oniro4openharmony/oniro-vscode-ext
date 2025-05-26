@@ -63,7 +63,7 @@ function getMainAbility(projectDir: string): string {
 
 /**
  * Install a HAP package to device/emulator via HDC
- * Automatically detects the signed .hap file in entry/build/default/outputs/default/
+ * Uses the configured .hap file path from workspace settings
  */
 export async function installApp(): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -71,18 +71,17 @@ export async function installApp(): Promise<void> {
     throw new Error('No workspace folder found.');
   }
   const projectDir = workspaceFolders[0].uri.fsPath;
-  const hapDir = path.join(projectDir, 'entry', 'build', 'default', 'outputs', 'default');
-  let hapFile: string | undefined;
-  try {
-    const files = fs.readdirSync(hapDir);
-    hapFile = files.find(f => f.endsWith('-signed.hap'));
-  } catch (err) {
-    throw new Error(`Could not read directory: ${hapDir}`);
+  
+  // Get the configured .hap path from workspace settings
+  const config = vscode.workspace.getConfiguration('oniro');
+  const relativeHapPath = config.get<string>('hapPath', 'entry/build/default/outputs/default/entry-default-signed.hap');
+  const hapPath = path.join(projectDir, relativeHapPath);
+  
+  // Check if the file exists
+  if (!fs.existsSync(hapPath)) {
+    throw new Error(`HAP file not found at: ${hapPath}. Please build and sign your app first.`);
   }
-  if (!hapFile) {
-    throw new Error('No signed .hap file found in entry/build/default/outputs/default/. Please build and sign your app first.');
-  }
-  const hapPath = path.join(hapDir, hapFile);
+  
   return execPromise(`${getHdcPath()} install "${hapPath}"`);
 }
 

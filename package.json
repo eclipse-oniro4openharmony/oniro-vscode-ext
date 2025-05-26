@@ -123,6 +123,11 @@
           "type": "string",
           "default": "${userHome}/oniro-emulator",
           "description": "Directory where Oniro emulator is installed."
+        },
+        "oniro.hapPath": {
+          "type": "string",
+          "default": "entry/build/default/outputs/default/entry-default-signed.hap",
+          "description": "Relative path to the signed .hap file from the workspace directory."
         }
       }
     }
