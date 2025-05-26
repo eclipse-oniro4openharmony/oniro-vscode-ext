@@ -85,20 +85,25 @@ export function activate(context: vscode.ExtensionContext) {
 		const progressOptions = {
 			title: 'Oniro: Running All Steps',
 			location: vscode.ProgressLocation.Notification,
-			cancellable: false
+			cancellable: true // Allow cancellation
 		};
-		await vscode.window.withProgress(progressOptions, async (progress) => {
+		await vscode.window.withProgress(progressOptions, async (progress, token) => {
 			try {
 				progress.report({ message: 'Starting emulator...' });
 				await startEmulator();
+				if (token.isCancellationRequested) return;
 				progress.report({ message: 'Connecting to emulator...' });
 				await attemptHdcConnection();
+				if (token.isCancellationRequested) return;
 				progress.report({ message: 'Building app...' });
 				await onirobuilderBuild();
+				if (token.isCancellationRequested) return;
 				progress.report({ message: 'Installing app...' });
 				await installApp();
+				if (token.isCancellationRequested) return;
 				progress.report({ message: 'Launching app...' });
 				await launchApp();
+				if (token.isCancellationRequested) return;
 
 				// Find process ID and open HiLog viewer
 				progress.report({ message: 'Detecting app process ID...' });
@@ -112,16 +117,32 @@ export function activate(context: vscode.ExtensionContext) {
 				oniroLogChannel.appendLine('[Oniro RunAll] Project directory: ' + projectDir);
 				let pid: string;
 				try {
-					pid = await findAppProcessId(projectDir);
+					pid = await Promise.race([
+						findAppProcessId(projectDir),
+						new Promise<string>((_, reject) => {
+							token.onCancellationRequested(() => {
+								reject(new Error('Cancelled by user'));
+							});
+						})
+					]);
 				} catch (err) {
 					oniroLogChannel.appendLine('[Oniro RunAll] ' + err);
+					if (err instanceof Error && err.message === 'Cancelled by user') {
+						vscode.window.showWarningMessage('Oniro: Run All cancelled by user.');
+						return;
+					}
 					throw err;
 				}
+				if (token.isCancellationRequested) return;
 				// Open HiLog viewer and start logging using the main command, passing processId and severity
 				vscode.commands.executeCommand('oniro-ide.showHilogViewer', { processId: pid, severity: 'INFO' });
 
 				vscode.window.showInformationMessage('Oniro: All steps completed successfully! Logs are now streaming.');
 			} catch (err) {
+				if (err instanceof Error && err.message === 'Cancelled by user') {
+					vscode.window.showWarningMessage('Oniro: Run All cancelled by user.');
+					return;
+				}
 				vscode.window.showErrorMessage(`Oniro: Run All failed: ${err}`);
 			}
 		});
