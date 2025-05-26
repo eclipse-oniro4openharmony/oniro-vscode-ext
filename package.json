@@ -2,11 +2,15 @@
   "name": "oniro-ide",
   "displayName": "Oniro IDE",
   "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git"
   },
+  "publisher": "francescopham",
+  "author": "Francesco Pham <francesco.pham1@h-partners.com>",
+  "license": "Apache-2.0",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.100.0"
   },
