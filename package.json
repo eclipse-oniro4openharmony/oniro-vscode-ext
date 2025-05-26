@@ -3,6 +3,10 @@
   "displayName": "Oniro IDE",
   "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git"
+  },
   "engines": {
     "vscode": "^1.100.0"
   },
