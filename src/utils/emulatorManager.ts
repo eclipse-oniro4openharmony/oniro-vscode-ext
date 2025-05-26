@@ -53,6 +53,21 @@ export async function attemptHdcConnection(address: string = '127.0.0.1:55555'):
 }
 
 export async function startEmulator(): Promise<void> {
+  // Check if qemu-system-x86_64 is available
+  const qemuAvailable = await new Promise<boolean>((resolve) => {
+    exec('which qemu-system-x86_64', (error, stdout) => {
+      if (error || !stdout.trim()) {
+        emulatorChannel.appendLine('ERROR: qemu-system-x86_64 not found in PATH.');
+        resolve(false);
+        return;
+      }
+      resolve(true);
+    });
+  });
+  if (!qemuAvailable) {
+    throw new Error('qemu-system-x86_64 not found in PATH.');
+  }
+
   // Check if emulator is already running
   if (fs.existsSync(PID_FILE)) {
     try {
@@ -74,8 +89,13 @@ export async function startEmulator(): Promise<void> {
   }
   // Start emulator in background and store PID
   const emulatorImagesPath = path.join(getEmulatorDir(), 'images');
-  await execPromise(`(./run.sh > /dev/null 2>&1 & echo $! > ${PID_FILE})`, emulatorImagesPath);
-  emulatorChannel.appendLine(`Emulator started in background. PID stored in ${PID_FILE}`);
+  try {
+    await execPromise(`(./run.sh > /dev/null 2>&1 & echo $! > ${PID_FILE})`, emulatorImagesPath);
+    emulatorChannel.appendLine(`Emulator started in background. PID stored in ${PID_FILE}`);
+  } catch (err) {
+    emulatorChannel.appendLine(`ERROR: Failed to start emulator: ${(err as Error).message}`);
+    throw new Error('Failed to start emulator.');
+  }
 
   // Show progress while waiting for HDC connection
   await vscode.window.withProgress({
