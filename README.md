@@ -20,14 +20,15 @@ Oniro IDE is a lightweight, integrated development environment as a Visual Studi
 
 - Node.js (LTS recommended)
 - Java SDK (for building/signing apps)
-- Required native tools (as per Oniro/OpenHarmony SDK requirements)
-- Oniro/OpenHarmony SDK (managed via the SDK Manager)
+- QEMU (for running the Oniro emulator)
 
 Ensure all dependencies are installed and available in your `PATH`.
 
 ## Installation
 
 ### From Marketplace
+
+You can install Oniro IDE directly from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=francescopham.oniro-ide).
 
 1. Open VS Code and go to the Extensions view (`Ctrl+Shift+X`).
 2. Search for **Oniro IDE** and click **Install**.
@@ -115,15 +116,7 @@ For additional integration for the ArkTS language, use the [ArkTS VS Code plugin
 ### 0.0.1
 Initial release: Oniro Tree View, build/sign/deploy workflow, emulator management, SDK Manager, HiLog Viewer, and debugging support.
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
 ## For more information
-
-- [Visual Studio Code's Extension API](https://code.visualstudio.com/api)
 - [Oniro Project](https://oniroproject.org/)
 - [OpenHarmony Documentation](https://www.openharmony.cn/en/)
 
