@@ -49,7 +49,7 @@ function getCurrentState(): SdkManagerState {
 }
 
 export function getSdkManagerHtml(context: vscode.ExtensionContext): string {
-    const htmlPath = path.join(context.extensionPath, 'src', 'sdkManagerWebview.html');
+    const htmlPath = path.join(context.extensionPath, 'out', 'sdkManagerWebview.html');
     return fs.readFileSync(htmlPath, 'utf8');
 }
 

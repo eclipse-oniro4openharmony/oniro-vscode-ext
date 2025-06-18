@@ -2,7 +2,7 @@
   "name": "oniro-ide",
   "displayName": "Oniro IDE",
   "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git"
@@ -142,7 +142,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && npm run copy-resources",
+    "copy-resources": "cp -r src/*.html out/ 2>/dev/null || cp src\\*.html out\\ 2>nul || true",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",

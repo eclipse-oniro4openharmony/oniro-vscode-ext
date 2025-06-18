@@ -37,7 +37,7 @@ You can install Oniro IDE directly from the [Visual Studio Code Marketplace](htt
 
 ```bash
 # Clone the repository
-git clone https://github.com/frankplus/oniro-ide
+git clone https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git
 cd oniro-ide
 
 # Install dependencies and build

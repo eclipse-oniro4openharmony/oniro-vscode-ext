@@ -159,7 +159,7 @@ async function startHilogProcess(
 }
 
 function getHilogWebviewContent(context: vscode.ExtensionContext): string {
-	const htmlPath = path.join(context.extensionPath, 'src', 'hilogWebview.html');
+	const htmlPath = path.join(context.extensionPath, 'out', 'hilogWebview.html');
 	try {
 		let html = fs.readFileSync(htmlPath, 'utf8');
 		return html;
