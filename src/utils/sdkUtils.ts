@@ -239,7 +239,7 @@ export async function downloadAndInstallSdk(version: string, api: string, progre
 
 export async function installCmdTools(progress?: vscode.Progress<{message?: string, increment?: number}>, abortSignal?: AbortSignal): Promise<void> {
     const CMD_PATH = getCmdToolsPath();
-    const url = 'https://repo.huaweicloud.com/harmonyos/ohpm/5.0.5/commandline-tools-linux-x64-5.0.5.310.zip';
+    const url = 'https://repo.huaweicloud.com/harmonyos/ohpm/5.1.0/commandline-tools-linux-x64-5.1.0.840.zip';
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oniro-cmdtools-'));
     const zipPath = path.join(tmpDir, 'oh-command-line-tools.zip');
     const extractPath = path.join(tmpDir, 'oh-command-line-tools');
