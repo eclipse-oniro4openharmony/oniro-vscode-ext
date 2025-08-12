@@ -11,6 +11,53 @@ import { registerSdkManagerCommand } from './sdkManager';
 import { OniroDebugConfigurationProvider } from './providers/OniroDebugConfigurationProvider';
 import { OniroTaskProvider } from './providers/oniroTaskProvider';
 
+// Helper function to detect app process ID and open HiLog viewer
+async function detectProcessIdAndShowHilog(token?: vscode.CancellationToken, progress?: vscode.Progress<{ message?: string; increment?: number }>): Promise<void> {
+	if (progress) {
+		progress.report({ message: 'Detecting app process ID...' });
+	}
+	oniroLogChannel.appendLine('[Oniro] Detecting app process ID...');
+	
+	const workspaceFolders = vscode.workspace.workspaceFolders;
+	if (!workspaceFolders || workspaceFolders.length === 0) {
+		oniroLogChannel.appendLine('[Oniro] No workspace folder found.');
+		throw new Error('No workspace folder found.');
+	}
+	
+	const projectDir = workspaceFolders[0].uri.fsPath;
+	oniroLogChannel.appendLine('[Oniro] Project directory: ' + projectDir);
+	
+	let pid: string;
+	try {
+		if (token) {
+			pid = await Promise.race([
+				findAppProcessId(projectDir),
+				new Promise<string>((_, reject) => {
+					token.onCancellationRequested(() => {
+						reject(new Error('Cancelled by user'));
+					});
+				})
+			]);
+		} else {
+			pid = await findAppProcessId(projectDir);
+		}
+	} catch (err) {
+		oniroLogChannel.appendLine('[Oniro] ' + err);
+		if (err instanceof Error && err.message === 'Cancelled by user') {
+			if (token?.isCancellationRequested) {
+				vscode.window.showWarningMessage('Oniro: Process detection cancelled by user.');
+				return;
+			}
+		}
+		throw err;
+	}
+	
+	if (token?.isCancellationRequested) return;
+	
+	// Open HiLog viewer and start logging using the main command, passing processId and severity
+	vscode.commands.executeCommand('oniro-ide.showHilogViewer', { processId: pid, severity: 'INFO' });
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -76,6 +123,14 @@ export function activate(context: vscode.ExtensionContext) {
 		try {
 			await launchApp();
 			vscode.window.showInformationMessage('App launched successfully!');
+			
+			// Detect process ID and show HiLog viewer
+			try {
+				await detectProcessIdAndShowHilog();
+				vscode.window.showInformationMessage('HiLog viewer opened with app process ID.');
+			} catch (err) {
+				vscode.window.showWarningMessage(`App launched but failed to detect process ID: ${err}`);
+			}
 		} catch (err) {
 			vscode.window.showErrorMessage(`Failed to launch app: ${err}`);
 		}
@@ -105,37 +160,8 @@ export function activate(context: vscode.ExtensionContext) {
 				await launchApp();
 				if (token.isCancellationRequested) return;
 
-				// Find process ID and open HiLog viewer
-				progress.report({ message: 'Detecting app process ID...' });
-				oniroLogChannel.appendLine('[Oniro RunAll] Detecting app process ID...');
-				const workspaceFolders = vscode.workspace.workspaceFolders;
-				if (!workspaceFolders || workspaceFolders.length === 0) {
-					oniroLogChannel.appendLine('[Oniro RunAll] No workspace folder found.');
-					throw new Error('No workspace folder found.');
-				}
-				const projectDir = workspaceFolders[0].uri.fsPath;
-				oniroLogChannel.appendLine('[Oniro RunAll] Project directory: ' + projectDir);
-				let pid: string;
-				try {
-					pid = await Promise.race([
-						findAppProcessId(projectDir),
-						new Promise<string>((_, reject) => {
-							token.onCancellationRequested(() => {
-								reject(new Error('Cancelled by user'));
-							});
-						})
-					]);
-				} catch (err) {
-					oniroLogChannel.appendLine('[Oniro RunAll] ' + err);
-					if (err instanceof Error && err.message === 'Cancelled by user') {
-						vscode.window.showWarningMessage('Oniro: Run All cancelled by user.');
-						return;
-					}
-					throw err;
-				}
-				if (token.isCancellationRequested) return;
-				// Open HiLog viewer and start logging using the main command, passing processId and severity
-				vscode.commands.executeCommand('oniro-ide.showHilogViewer', { processId: pid, severity: 'INFO' });
+				// Detect process ID and open HiLog viewer
+				await detectProcessIdAndShowHilog(token, progress);
 
 				vscode.window.showInformationMessage('Oniro: All steps completed successfully! Logs are now streaming.');
 			} catch (err) {
