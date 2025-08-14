@@ -26,12 +26,16 @@ Ensure all dependencies are installed and available in your `PATH`.
 
 ## Installation
 
-### From Marketplace
+### From Marketplace / Open VSX
 
-You can install Oniro IDE directly from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=francescopham.oniro-ide).
+Install Oniro IDE from either:
+- Visual Studio Code Marketplace: https://marketplace.visualstudio.com/items?itemName=francescopham.oniro-ide
+- Open VSX Registry (for VSCodium / compatible IDEs): https://open-vsx.org/extension/francescopham/oniro-ide
 
-1. Open VS Code and go to the Extensions view (`Ctrl+Shift+X`).
-2. Search for **Oniro IDE** and click **Install**.
+Steps (VS Code or compatible):
+1. Open the Extensions view (Ctrl+Shift+X).
+2. Search for Oniro IDE.
+3. Click Install.
 
 ### From Source (Development)
 
