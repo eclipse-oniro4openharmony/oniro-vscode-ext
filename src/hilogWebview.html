@@ -53,7 +53,13 @@
 			<div class="flex gap-2 flex-wrap">
 				<div>
 					<label class="block text-sm font-medium mb-1" for="processId">Process ID</label>
-					<input id="processId" type="text" class="rounded px-2 py-1 text-black" placeholder="e.g. 1234" />
+					<div class="flex gap-1">
+						<input id="processId" list="processList" type="text" class="rounded-l px-2 py-1 text-black" placeholder="Select or enter Process ID (e.g. 1234)" style="min-width: 280px;" />
+						<datalist id="processList">
+							<!-- Options will be populated dynamically -->
+						</datalist>
+						<button id="refreshProcessesBtn" class="bg-transparent hover:bg-gray-200 text-black px-2 py-1 rounded-r" title="Refresh process list">🔄</button>
+					</div>
 				</div>
 				<div>
 					<label class="block text-sm font-medium mb-1">Severity</label>
@@ -134,10 +140,34 @@
 	// Signal to extension that webview is ready to receive initial data
 	window.addEventListener('DOMContentLoaded', () => {
 		vscode.postMessage({ command: 'webviewReady' });
+		// Request initial process list
+		vscode.postMessage({ command: 'refreshProcesses' });
 	});
 
+	// Handle refresh processes button
+	document.getElementById('refreshProcessesBtn').onclick = () => {
+		vscode.postMessage({ command: 'refreshProcesses' });
+	};
+
+	// Function to update process dropdown
+	function updateProcessDropdown(processes) {
+		const datalist = document.getElementById('processList');
+		// Clear existing options
+		datalist.innerHTML = '';
+		
+		// Add processes to datalist
+		processes.forEach(process => {
+			const option = document.createElement('option');
+			option.value = process.pid;
+			option.textContent = `${process.pid} - ${process.name}`;
+			datalist.appendChild(option);
+		});
+	}
+
 	document.getElementById('startBtn').onclick = () => {
+		// Get process ID from the input (works with both manual entry and datalist selection)
 		const processId = document.getElementById('processId').value.trim();
+		
 		const severity = document.getElementById('severitySelect').value;
 		// Clear previous logs
 		document.getElementById('logTableBody').innerHTML = '';
@@ -355,6 +385,15 @@
 		}
 		if (msg.command === 'streamingStopped') {
 			setStreamingState(false);
+		}
+		if (msg.command === 'processesUpdated') {
+			updateProcessDropdown(msg.processes);
+		}
+		if (msg.command === 'processesError') {
+			console.error('Failed to get processes:', msg.error);
+			// Optionally show error in UI
+			const datalist = document.getElementById('processList');
+			datalist.innerHTML = '<option value="">Error loading processes</option>';
 		}
 	});
 	</script>

@@ -4,6 +4,7 @@ import * as path from 'path';
 import { OniroCommands } from './OniroTreeDataProvider';
 import { getHdcPath } from './utils/sdkUtils';
 import { oniroLogChannel } from './utils/logger';
+import { getAllRunningProcesses } from './utils/hdcManager';
 
 export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 	const showHilogViewerDisposable = vscode.commands.registerCommand(
@@ -41,6 +42,23 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 						hdcProcess.kill();
 						hdcProcess = undefined;
 						panel.webview.postMessage({ command: 'streamingStopped' });
+					}
+					if (message.command === 'refreshProcesses') {
+						try {
+							const processes = await getAllRunningProcesses();
+							// Log processes to console for debugging
+							oniroLogChannel.appendLine(`[HiLog] Found ${processes.length} processes`);
+							panel.webview.postMessage({ 
+								command: 'processesUpdated', 
+								processes: processes 
+							});
+						} catch (error) {
+							oniroLogChannel.appendLine(`[HiLog] Failed to get processes: ${error}`);
+							panel.webview.postMessage({ 
+								command: 'processesError', 
+								error: error instanceof Error ? error.message : 'Unknown error' 
+							});
+						}
 					}
 				},
 				undefined,

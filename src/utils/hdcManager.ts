@@ -101,13 +101,19 @@ export async function launchApp(): Promise<void> {
 }
 
 /**
- * Find the process ID (PID) of the running app by bundle name using hdc track-jpid
+ * Helper function to get running processes using hdc track-jpid
+ * Can optionally filter by a target process name and return early
  */
-export async function findAppProcessId(projectDir: string): Promise<string> {
-  const bundleName = getBundleName(projectDir);
-  return new Promise<string>((resolve, reject) => {
+function getRunningProcesses(
+  targetProcessName?: string,
+  timeout: number = 1000
+): Promise<Array<{ pid: string; name: string }> | string> {
+  return new Promise<Array<{ pid: string; name: string }> | string>((resolve, reject) => {
     const { spawn } = require('child_process');
     const proc = spawn(getHdcPath(), ['track-jpid']);
+    const processes: Array<{ pid: string; name: string }> = [];
+    let resolved = false;
+
     proc.stdout.on('data', (data: Buffer) => {
       const lines = data.toString().split('\n').filter(Boolean);
       for (const line of lines) {
@@ -115,27 +121,77 @@ export async function findAppProcessId(projectDir: string): Promise<string> {
         if (match) {
           const pid = match[1];
           const name = match[2];
+          processes.push({ pid, name });
           hdcChannel.appendLine(`[hdcManager] Found process: pid=${pid}, name=${name}`);
-          if (name === bundleName) {
-            hdcChannel.appendLine(`[hdcManager] Found matching process for bundle: ${bundleName} with pid: ${pid}`);
-            proc.kill();
-            resolve(pid);
-            return;
+          
+          // If we're looking for a specific process, return its PID immediately
+          if (targetProcessName && name === targetProcessName) {
+            hdcChannel.appendLine(`[hdcManager] Found matching process for bundle: ${targetProcessName} with pid: ${pid}`);
+            if (!resolved) {
+              resolved = true;
+              proc.kill();
+              resolve(pid);
+              return;
+            }
           }
         } else {
           hdcChannel.appendLine(`[hdcManager] No match for line: ${line}`);
         }
       }
     });
+
     proc.stderr.on('data', (data: Buffer) => {
       hdcChannel.appendLine(`[hdcManager] hdc track-jpid stderr: ${data.toString()}`);
     });
-    proc.on('close', (code: number) => {
-      reject(new Error('Could not find process for bundle: ' + bundleName));
-    });
+
     proc.on('error', (err: any) => {
-      hdcChannel.appendLine(`[hdcManager] hdc track-jpid process error: ${err}`);
-      reject(err);
+      if (!resolved) {
+        resolved = true;
+        hdcChannel.appendLine(`[hdcManager] hdc track-jpid process error: ${err}`);
+        reject(err);
+      }
+    });
+
+    // Set timeout and handle close event
+    const timeoutHandle = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        proc.kill();
+        if (targetProcessName) {
+          reject(new Error(`Could not find process for bundle: ${targetProcessName}`));
+        } else {
+          resolve(processes);
+        }
+      }
+    }, timeout);
+
+    proc.on('close', (code: number) => {
+      clearTimeout(timeoutHandle);
+      if (!resolved) {
+        resolved = true;
+        if (targetProcessName) {
+          reject(new Error(`Could not find process for bundle: ${targetProcessName}`));
+        } else {
+          resolve(processes);
+        }
+      }
     });
   });
+}
+
+/**
+ * Get all running processes using hdc track-jpid
+ */
+export async function getAllRunningProcesses(): Promise<Array<{ pid: string; name: string }>> {
+  const result = await getRunningProcesses();
+  return result as Array<{ pid: string; name: string }>;
+}
+
+/**
+ * Find the process ID (PID) of the running app by bundle name using hdc track-jpid
+ */
+export async function findAppProcessId(projectDir: string): Promise<string> {
+  const bundleName = getBundleName(projectDir);
+  const result = await getRunningProcesses(bundleName);
+  return result as string;
 }
