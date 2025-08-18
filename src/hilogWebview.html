@@ -65,8 +65,17 @@
 						<option value="FATAL">Fatal</option>
 					</select>
 				</div>
+				<div>
+					<label class="block text-sm font-medium mb-1" for="tagFilter">Tag Filter</label>
+					<input id="tagFilter" type="text" class="rounded px-2 py-1 text-black" placeholder="e.g. OHOS" title="Filter logs by tag (case-insensitive substring match)" />
+				</div>
+				<div>
+					<label class="block text-sm font-medium mb-1" for="messageFilter">Message Filter</label>
+					<input id="messageFilter" type="text" class="rounded px-2 py-1 text-black" placeholder="Enter text to search in messages" title="Filter logs by message content (case-insensitive substring match)" />
+				</div>
 			</div>
 			<div class="flex gap-2 items-end ml-4">
+				<button id="clearFiltersBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">Clear Filters</button>
 				<button id="startBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Start</button>
 				<button id="stopBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Stop</button>
 				<!-- "Scroll to Latest" button, hidden by default -->
@@ -130,8 +139,9 @@
 	document.getElementById('startBtn').onclick = () => {
 		const processId = document.getElementById('processId').value.trim();
 		const severity = document.getElementById('severitySelect').value;
-		// Allow empty processId to get system logs
+		// Clear previous logs
 		document.getElementById('logTableBody').innerHTML = '';
+		allLogs.length = 0; // Clear stored logs
 		vscode.postMessage({ command: 'startLog', processId, severity });
 		running = true;
 		setStreamingState(true);
@@ -141,6 +151,17 @@
 		running = false;
 		setStreamingState(false);
 	};
+
+	document.getElementById('clearFiltersBtn').onclick = () => {
+		document.getElementById('tagFilter').value = '';
+		document.getElementById('messageFilter').value = '';
+		applyFilters();
+	};
+
+	// Add event listeners for real-time filtering
+	document.getElementById('tagFilter').addEventListener('input', applyFilters);
+	document.getElementById('messageFilter').addEventListener('input', applyFilters);
+	document.getElementById('severitySelect').addEventListener('change', applyFilters);
 
 	// Map severity select value to log level order
 	const severityOrder = {
@@ -194,38 +215,111 @@
 
 	// --- Batching logic ---
 	const logBuffer = [];
+	const allLogs = []; // Store all received logs for filtering
 	const FLUSH_INTERVAL = 50; // ms
 	const LOG_ROW_LIMIT = 2000; // Maximum number of log rows to keep
 
-	function flushLogBuffer() {
-		const logTableBody = document.getElementById('logTableBody');
-		let scrolled = false;
-		if (logBuffer.length > 0) {
-			const fragment = document.createDocumentFragment();
-			for (const parsed of logBuffer) {
-				const tr = document.createElement('tr');
-				tr.className = 'hover:bg-gray-800';
-				tr.innerHTML = [
-					`<td class="px-2 py-1 whitespace-nowrap">${parsed.time}</td>`,
-					`<td class="px-2 py-1 whitespace-nowrap">${parsed.pid}</td>`,
-					`<td class="px-2 py-1 whitespace-nowrap">${parsed.tid}</td>`,
-					`<td class="px-2 py-1 whitespace-nowrap ${levelColor(parsed.level)}">${parsed.level}</td>`,
-					`<td class="px-2 py-1 whitespace-nowrap">${parsed.tag}</td>`,
-					`<td class="px-2 py-1">${parsed.message}</td>`
-				].join('');
-				fragment.appendChild(tr);
-			}
-			logTableBody.appendChild(fragment);
-			logBuffer.length = 0;
-			scrolled = true;
+	function matchesFilters(parsed) {
+		const tagFilter = document.getElementById('tagFilter').value.toLowerCase().trim();
+		const messageFilter = document.getElementById('messageFilter').value.toLowerCase().trim();
 
-			// Remove oldest rows if over limit
-			while (logTableBody.rows.length > LOG_ROW_LIMIT) {
-				logTableBody.deleteRow(0);
+		if (tagFilter && !parsed.tag.toLowerCase().includes(tagFilter)) {
+			return false;
+		}
+
+		if (messageFilter && !parsed.message.toLowerCase().includes(messageFilter)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	function shouldShowLog(parsed) {
+		// Severity filtering
+		const selectedSeverity = document.getElementById('severitySelect').value;
+		const minLevel = severityOrder[selectedSeverity] || 1;
+		const logLevel = levelMap[parsed.level] || 1;
+		if (logLevel < minLevel) return false;
+
+		// Text filtering
+		return matchesFilters(parsed);
+	}
+
+	function applyFilters() {
+		const logTableBody = document.getElementById('logTableBody');
+		logTableBody.innerHTML = '';
+		
+		const fragment = document.createDocumentFragment();
+		let displayedCount = 0;
+		
+		// Process logs from newest to oldest, but only show up to LOG_ROW_LIMIT
+		for (let i = Math.max(0, allLogs.length - LOG_ROW_LIMIT); i < allLogs.length; i++) {
+			const parsed = allLogs[i];
+			if (shouldShowLog(parsed)) {
+				const tr = createLogRow(parsed);
+				fragment.appendChild(tr);
+				displayedCount++;
 			}
 		}
-		if (scrolled && stickToLatest) {
+		
+		logTableBody.appendChild(fragment);
+		
+		if (stickToLatest) {
 			logTableContainer.scrollTop = logTableContainer.scrollHeight;
+		}
+	}
+
+	function createLogRow(parsed) {
+		const tr = document.createElement('tr');
+		tr.className = 'hover:bg-gray-800';
+		tr.innerHTML = [
+			`<td class="px-2 py-1 whitespace-nowrap">${parsed.time}</td>`,
+			`<td class="px-2 py-1 whitespace-nowrap">${parsed.pid}</td>`,
+			`<td class="px-2 py-1 whitespace-nowrap">${parsed.tid}</td>`,
+			`<td class="px-2 py-1 whitespace-nowrap ${levelColor(parsed.level)}">${parsed.level}</td>`,
+			`<td class="px-2 py-1 whitespace-nowrap">${parsed.tag}</td>`,
+			`<td class="px-2 py-1">${parsed.message}</td>`
+		].join('');
+		return tr;
+	}
+
+	function flushLogBuffer() {
+		if (logBuffer.length > 0) {
+			// Add new logs to allLogs array
+			allLogs.push(...logBuffer);
+			
+			// Keep only the most recent logs to prevent memory issues
+			if (allLogs.length > LOG_ROW_LIMIT * 2) {
+				allLogs.splice(0, allLogs.length - LOG_ROW_LIMIT);
+			}
+			
+			// Only add visible logs to DOM
+			const logTableBody = document.getElementById('logTableBody');
+			const fragment = document.createDocumentFragment();
+			let scrolled = false;
+			
+			for (const parsed of logBuffer) {
+				if (shouldShowLog(parsed)) {
+					const tr = createLogRow(parsed);
+					fragment.appendChild(tr);
+					scrolled = true;
+				}
+			}
+			
+			if (fragment.children.length > 0) {
+				logTableBody.appendChild(fragment);
+				
+				// Remove oldest displayed rows if over limit
+				while (logTableBody.rows.length > LOG_ROW_LIMIT) {
+					logTableBody.deleteRow(0);
+				}
+			}
+			
+			logBuffer.length = 0;
+			
+			if (scrolled && stickToLatest) {
+				logTableContainer.scrollTop = logTableContainer.scrollHeight;
+			}
 		}
 	}
 	setInterval(flushLogBuffer, FLUSH_INTERVAL);
@@ -242,6 +336,7 @@
 			}
 			if (msg.processId) {
 				document.getElementById('logTableBody').innerHTML = '';
+				allLogs.length = 0; // Clear stored logs
 				vscode.postMessage({ command: 'startLog', processId: msg.processId, severity: msg.severity || 'INFO' });
 				running = true;
 				setStreamingState(true);
@@ -251,11 +346,7 @@
 			// Now msg.log is already parsed
 			const parsed = msg.log;
 			if (!parsed) return;
-			// Severity filtering
-			const selectedSeverity = document.getElementById('severitySelect').value;
-			const minLevel = severityOrder[selectedSeverity] || 1;
-			const logLevel = levelMap[parsed.level] || 1;
-			if (logLevel < minLevel) return;
+			
 			logBuffer.push(parsed);
 			// DOM update is now batched
 		}
