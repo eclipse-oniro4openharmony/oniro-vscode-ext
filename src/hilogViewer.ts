@@ -15,7 +15,8 @@ export function registerHilogViewerCommand(context: vscode.ExtensionContext) {
 				'Oniro HiLog Viewer',
 				vscode.ViewColumn.One,
 				{
-					enableScripts: true
+					enableScripts: true,
+					retainContextWhenHidden: true // Keep webview alive when hidden
 				}
 			);
 
