@@ -317,7 +317,7 @@ export async function installEmulator(
     progress?: vscode.Progress<{message?: string, increment?: number}>,
     abortSignal?: AbortSignal
 ): Promise<void> {
-    const EMULATOR_URL = "https://github.com/eclipse-oniro4openharmony/device_board_oniro/releases/download/v1.0.0/oniro_emulator.zip";
+    const EMULATOR_URL = "https://github.com/eclipse-oniro4openharmony/device_board_oniro/releases/latest/download/oniro_emulator.zip";
     const EMULATOR_DIR = getEmulatorDir();
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oniro-emulator-'));
     const tmpZip = path.join(tmpDir, 'oniro_emulator.zip');
