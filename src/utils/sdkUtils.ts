@@ -64,7 +64,8 @@ export const ALL_SDKS = [
     { version: '5.0.1', api: '13' },
     { version: '5.0.2', api: '14' },
     { version: '5.0.3', api: '15' },
-    { version: '5.1.0', api: '18' }
+    { version: '5.1.0', api: '18' },
+    { version: '6.0', api: '20' }
 ];
 
 export function getInstalledSdks(): string[] {
@@ -173,7 +174,7 @@ export function getSdkFilename(version?: string): { filename: string, osFolder: 
     const v = version || ALL_SDKS[ALL_SDKS.length - 1].version;
     if (platform === 'linux') {
         // For 5.0.0 and 5.0.1, do not strip components
-        const strip = (v === '5.0.0' || v === '5.0.1') ? 0 : 1;
+        const strip = (v === '5.0.0' || v === '5.0.1' || v === '6.0') ? 0 : 1;
         return { filename: 'ohos-sdk-windows_linux-public.tar.gz', osFolder: 'linux', strip };
     } else if (platform === 'darwin') {
         // Always strip 3 for mac
@@ -184,7 +185,7 @@ export function getSdkFilename(version?: string): { filename: string, osFolder: 
         }
     } else if (platform === 'win32') {
         // For 5.0.0 and 5.0.1, do not strip components
-        const strip = (v === '5.0.0' || v === '5.0.1') ? 0 : 1;
+        const strip = (v === '5.0.0' || v === '5.0.1' || v === '6.0') ? 0 : 1;
         return { filename: 'ohos-sdk-windows_linux-public.tar.gz', osFolder: 'windows', strip };
     } else {
         throw new Error('Unsupported OS');
