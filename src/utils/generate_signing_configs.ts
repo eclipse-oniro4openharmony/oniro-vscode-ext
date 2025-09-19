@@ -3,6 +3,7 @@ import * as path from "path";
 import { execSync } from "child_process";
 import { encryptPwd, createMaterial } from './encrypt_key';
 import * as json5 from "json5";
+import { detectProjectSdkVersion } from './sdkUtils'
 
 // Function to copy necessary files to the project directory
 function copyFilesToProject(projectDir: string, KEYSTORE_FILE: string, PROFILE_CERT_FILE: string, UNSIGNED_PROFILE_TEMPLATE: string): void {
@@ -156,11 +157,23 @@ export function generateSigningConfigs(projectDir?: string, SDK_HOME?: string): 
         throw new Error("SDK_HOME must be provided.");
     }
 
+    // Detect project SDK version
+    const sdkVersion = detectProjectSdkVersion(projectDir);
+    if (!sdkVersion) {
+        throw new Error("Could not detect project SDK version.");
+    }
+
+    // check if SDK path exists
+    const sdkPath = path.join(SDK_HOME, String(sdkVersion));
+    if (!fs.existsSync(sdkPath)) {
+        throw new Error(`SDK path does not exist: ${sdkPath}`);
+    }
+
     // Define constants for SDK paths inside the function
-    const SIGN_TOOL_PATH = path.join(SDK_HOME, "12/toolchains/lib/hap-sign-tool.jar");
-    const KEYSTORE_FILE = path.join(SDK_HOME, "12/toolchains/lib/OpenHarmony.p12");
-    const PROFILE_CERT_FILE = path.join(SDK_HOME, "12/toolchains/lib/OpenHarmonyProfileRelease.pem");
-    const UNSIGNED_PROFILE_TEMPLATE = path.join(SDK_HOME, "12/toolchains/lib/UnsgnedReleasedProfileTemplate.json");
+    const SIGN_TOOL_PATH = path.join(sdkPath, "toolchains/lib/hap-sign-tool.jar");
+    const KEYSTORE_FILE = path.join(sdkPath, "toolchains/lib/OpenHarmony.p12");
+    const PROFILE_CERT_FILE = path.join(sdkPath, "toolchains/lib/OpenHarmonyProfileRelease.pem");
+    const UNSIGNED_PROFILE_TEMPLATE = path.join(sdkPath, "toolchains/lib/UnsgnedReleasedProfileTemplate.json");
 
     console.log("Starting signing configuration generation...");
     copyFilesToProject(projectDir, KEYSTORE_FILE, PROFILE_CERT_FILE, UNSIGNED_PROFILE_TEMPLATE);

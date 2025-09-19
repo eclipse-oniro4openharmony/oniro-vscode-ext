@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as JSON5 from 'json5';
 import * as os from 'os';
 import { https, http } from 'follow-redirects';
 import { pipeline } from 'stream';
@@ -347,5 +348,33 @@ export function removeEmulator(): void {
     const EMULATOR_DIR = getEmulatorDir();
     if (fs.existsSync(EMULATOR_DIR)) {
         fs.rmSync(EMULATOR_DIR, { recursive: true, force: true });
+    }
+}
+
+/**
+ * Detects the project SDK version by reading the compileSdkVersion field from build-profile.json5 at the project root.
+ * @param projectRoot The absolute path to the project root directory.
+ * @returns The compileSdkVersion as a number, or undefined if not found or on error.
+ */
+export function detectProjectSdkVersion(projectRoot: string): number | undefined {
+    try {
+        const buildProfilePath = path.join(projectRoot, 'build-profile.json5');
+        if (!fs.existsSync(buildProfilePath)) {
+            oniroLogChannel.appendLine(`build-profile.json5 not found at ${projectRoot}`);
+            return undefined;
+        }
+        const fileContent = fs.readFileSync(buildProfilePath, 'utf-8');
+        const config = JSON5.parse(fileContent);
+        const products = config?.app?.products;
+        if (Array.isArray(products) && products.length > 0) {
+            const compileSdkVersion = products[0]?.compileSdkVersion;
+            if (typeof compileSdkVersion === 'number') {
+                return compileSdkVersion;
+            }
+        }
+        return undefined;
+    } catch (err) {
+        oniroLogChannel.appendLine(`Error reading build-profile.json5 at ${projectRoot}: ${err}`);
+        return undefined;
     }
 }
