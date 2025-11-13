@@ -150,6 +150,9 @@ export function activate(context: vscode.ExtensionContext) {
 				progress.report({ message: 'Connecting to emulator...' });
 				await attemptHdcConnection();
 				if (token.isCancellationRequested) return;
+				progress.report({ message: 'Waiting for emulator to boot...' });
+				await new Promise(resolve => setTimeout(resolve, 10000));
+				if (token.isCancellationRequested) return;
 				progress.report({ message: 'Building app...' });
 				await onirobuilderBuild();
 				if (token.isCancellationRequested) return;
