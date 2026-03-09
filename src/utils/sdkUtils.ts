@@ -10,10 +10,12 @@ import * as tar from 'tar';
 import { oniroLogChannel } from '../utils/logger';
 import * as vscode from 'vscode';
 
+const pipelineAsync = promisify(pipeline);
+
 /**
  * Extracts a ZIP archive to a destination directory, reporting progress and restoring file permissions.
  *
- * This function uses the `unzipper` library to extract files from a ZIP archive. It reports extraction progress
+ * This function uses the `node-stream-zip` library to extract files from a ZIP archive. It reports extraction progress
  * via the provided VS Code progress object. For each extracted file, it restores the original file permissions
  * (if available in the ZIP attributes), which is important for executable files on Linux/macOS.
  *
@@ -33,11 +35,12 @@ async function extractZipWithProgress(
 ): Promise<void> {
 
     // Lazy require to avoid import-time errors if module is not installed
-    const unzipper = require('unzipper');
+    const StreamZip = require('node-stream-zip');
 
     // Open the ZIP file and get the list of entries
-    const dir = await unzipper.Open.file(zipPath);
-    const files = dir.files || [];
+    const zip = new StreamZip.async({ file: zipPath });
+    const entries = await zip.entries();
+    const files = Object.values(entries) as any[];
     const total = files.length || 1;
 
     // Clamp progress budget to sane bounds
@@ -65,52 +68,77 @@ async function extractZipWithProgress(
         return resolved;
     };
     
-    // Process each file entry in the ZIP
-    for (const file of files) {
-        const entryName = file.path as string;
-        const targetPath = safeResolveTarget(entryName);
-
-        if (file.type === 'Directory') {
-            // Create directory if the entry is a directory
-            await fs.promises.mkdir(targetPath, { recursive: true });
-        } else {
-
-            // Ensure the parent directory exists
-            await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
+    try {
+        // Process each file entry in the ZIP
+        for (const file of files) {
+            const entryName = file.name as string;
+            const targetPath = safeResolveTarget(entryName);
             
-            // Extract the file by streaming its contents to disk
-            const readStream = file.stream();
-            const writeStream = fs.createWriteStream(targetPath);
-            await pipelineAsync(readStream as any, writeStream);
+            const attr = file.attr ? (file.attr >>> 16) : 0;
+            const isSymlink = Object.prototype.hasOwnProperty.call(file, 'isSymbolicLink') 
+                ? file.isSymbolicLink 
+                : ((attr & 0o170000) === 0o120000);
 
-            // Restore file permissions if available in ZIP attributes (important for executables)
-            // Only applies to files, not directories
-            const attr = file.externalFileAttributes >>> 16;
-            if (attr > 0) {
+            if (file.isDirectory) {
+                // Create directory if the entry is a directory
+                await fs.promises.mkdir(targetPath, { recursive: true });
+            } else if (isSymlink) {
+                // Ensure the parent directory exists
+                await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
+                
+                // The content of the symlink file is the target path
+                const linkTargetBuffer = await zip.entryData(file);
+                const linkTarget = linkTargetBuffer.toString('utf8');
+                
                 try {
-                    await fs.promises.chmod(targetPath, attr & 0o777);
+                    // Determine symlink type for Windows (optional but recommended depending on target)
+                    const isWin = os.platform() === 'win32';
+                    // Node's default is 'file', but if it points to a directory you might need 'junction' on Windows
+                    // We'll just use 'file' or undefined for now.
+                    await fs.promises.symlink(linkTarget, targetPath, isWin ? 'file' : undefined);
                 } catch (e) {
-                    // Ignore chmod errors (e.g., on Windows or if not supported)
+                    oniroLogChannel.appendLine(`[SDK] Failed to create symlink at ${targetPath}: ${e}`);
+                }
+            } else {
+
+                // Ensure the parent directory exists
+                await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
+                
+                // Extract the file by streaming its contents to disk
+                const readStream = await zip.stream(file);
+                const writeStream = fs.createWriteStream(targetPath);
+                await pipelineAsync(readStream as any, writeStream);
+
+                // Restore file permissions if available in ZIP attributes (important for executables)
+                // Only applies to files, not directories
+                if (attr > 0) {
+                    try {
+                        await fs.promises.chmod(targetPath, attr & 0o777);
+                    } catch (e) {
+                        // Ignore chmod errors (e.g., on Windows or if not supported)
+                    }
                 }
             }
-        }
 
-        processed++;
+            processed++;
 
-        // Report extraction progress if a progress object is provided
-        if (progress) {
+            // Report extraction progress if a progress object is provided
+            if (progress) {
 
-            const localPercent = Math.min(100, Math.round((processed / total) * 100));
-            const overall = Math.min(100, Math.round(s + (processed / total) * r));
-            const inc = overall - lastOverall;
+                const localPercent = Math.min(100, Math.round((processed / total) * 100));
+                const overall = Math.min(100, Math.round(s + (processed / total) * r));
+                const inc = overall - lastOverall;
 
-            if (inc > 0) {
-                progress.report?.({ message: `Extracting: ${localPercent}%`, increment: inc });
-                lastOverall = overall;
-            } else {
-                progress.report?.({ message: `Extracting: ${localPercent}%`, increment: 0 });
+                if (inc > 0) {
+                    progress.report?.({ message: `Extracting: ${localPercent}%`, increment: inc });
+                    lastOverall = overall;
+                } else {
+                    progress.report?.({ message: `Extracting: ${localPercent}%`, increment: 0 });
+                }
             }
-        }
+        } // end of for-loop
+    } finally {
+        await zip.close();
     }
 
     // Ensure we finish exactly at the end of our allocated range.
@@ -485,8 +513,6 @@ export function getCmdToolsStatus(): { installed: boolean, status: string } {
         return { installed: false, status: 'Not installed' };
     }
 }
-
-const pipelineAsync = promisify(pipeline);
 
 /**
  * Download a remote file to a local destination with optional progress reporting.
