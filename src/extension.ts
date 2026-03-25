@@ -12,6 +12,7 @@ import { OniroDebugConfigurationProvider } from './providers/OniroDebugConfigura
 import { OniroTaskProvider } from './providers/oniroTaskProvider';
 import { registerCreateProjectCommand } from './createProject';
 import { registerBuildConfigCommand } from './buildConfig';
+import { startLanguageClient, stopLanguageClient } from './languageClient';
 
 // Helper function to detect app process ID and open HiLog viewer
 async function detectProcessIdAndShowHilog(token?: vscode.CancellationToken, progress?: vscode.Progress<{ message?: string; increment?: number }>): Promise<void> {
@@ -63,6 +64,7 @@ async function detectProcessIdAndShowHilog(token?: vscode.CancellationToken, pro
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	startLanguageClient(context);
 
 	const signDisposable = vscode.commands.registerCommand(OniroCommands.SIGN, async () => {
 		try {
@@ -205,4 +207,6 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate(): Thenable<void> | undefined {
+	return stopLanguageClient();
+}
