@@ -29,7 +29,8 @@
     "onCommand:oniro-ide.connectEmulator",
     "onCommand:oniro-ide.installApp",
     "onCommand:oniro-ide.launchApp",
-    "onCommand:oniro-ide.showHilogViewer"
+    "onCommand:oniro-ide.showHilogViewer",
+    "onLanguage:ets"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -175,9 +176,46 @@
           "type": "string",
           "default": "entry/build/default/outputs/default/entry-default-signed.hap",
           "description": "Relative path to the signed .hap file from the workspace directory."
+        },
+        "ets.linterVersion": {
+          "type": "string",
+          "description": "The version of the ArkTS linter to use. Set to 'off' to disable the linter.",
+          "enum": [
+            "1.0",
+            "1.1",
+            "off"
+          ],
+          "default": "1.1"
         }
       }
-    }
+    },
+    "languages": [
+      {
+        "id": "ets",
+        "extensions": [
+          ".ets",
+          ".d.ets"
+        ],
+        "aliases": [
+          "ArkTS",
+          "ets"
+        ],
+        "configuration": "./language/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ets",
+        "scopeName": "source.ets",
+        "path": "./syntaxes/ets.tmLanguage.json"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "code-linter.json5",
+        "url": "./schemas/code-linter.schema.json"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -201,10 +239,14 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@arkts/language-plugin": "^1.3.3",
+    "@arkts/language-server": "^1.3.8",
+    "@arkts/language-service": "^1.3.8",
     "extract-zip": "^2.0.1",
     "follow-redirects": "^1.15.9",
     "json5": "^2.2.3",
     "node-stream-zip": "^1.15.0",
-    "tar": "^7.4.3"
+    "tar": "^7.4.3",
+    "vscode-languageclient": "^9.0.1"
   }
 }
