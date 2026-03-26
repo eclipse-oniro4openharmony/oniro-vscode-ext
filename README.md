@@ -14,6 +14,7 @@ Oniro IDE is a lightweight, integrated development environment as a Visual Studi
 - **Run All**: One-click workflow to start the emulator, build, install, and launch your app, then open the HiLog Viewer for live logs.
 - **HiLog Viewer**: View and filter real-time logs from your running Oniro app within VS Code.
 - **SDK Manager**: Install, update, or remove OpenHarmony SDKs, command-line tools, and the Oniro emulator via a graphical interface.
+- **ArkTS Language Support**: Built-in syntax highlighting, autocomplete, code navigation, and linting for `.ets` files using the OpenHarmony SDK.
 - **Oniro Tasks**: Run Oniro-specific build tasks from the VS Code task system.
 - **Debugging**: Debug Oniro applications using the "Oniro Debug" configuration.
 
@@ -116,10 +117,6 @@ To allow the integrated F5 launch shortcut to automatically execute the Oniro "R
 ```
 
 This will let you use F5 or the "Run" button in VS Code to trigger the Oniro "Run All" command for building, deploying, and launching your app.
-
-## ArkTS Language Integration
-
-For additional integration for the ArkTS language, use the [ArkTS VS Code plugin](https://github.com/Groupguanfang/arkTS), which supports source code navigation and completion. It also supports codelinter to detect errors.
 
 ## For more information
 - [Oniro Project](https://oniroproject.org/)
