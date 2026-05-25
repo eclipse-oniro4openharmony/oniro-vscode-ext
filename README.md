@@ -1,6 +1,6 @@
-# Oniro IDE
+# Oniro App IDE
 
-Oniro IDE is a lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development. It provides a streamlined workflow for building, signing, deploying, running, and debugging Oniro apps, as well as managing SDKs and emulators.
+Oniro App IDE is a lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development. It provides a streamlined workflow for building, signing, deploying, running, and debugging Oniro apps, as well as managing SDKs and emulators.
 
 ![screencast](./media/screencast_readme.gif)
 
@@ -30,13 +30,13 @@ Ensure all dependencies are installed and available in your `PATH`.
 
 ### From Marketplace / Open VSX
 
-Install Oniro IDE from either:
+Install Oniro App IDE from either:
 - Visual Studio Code Marketplace: https://marketplace.visualstudio.com/items?itemName=oniro.oniro-app-ide
 - Open VSX Registry (for VSCodium / compatible IDEs): https://open-vsx.org/extension/oniro/oniro-app-ide
 
 Steps (VS Code or compatible):
 1. Open the Extensions view (Ctrl+Shift+X).
-2. Search for Oniro IDE.
+2. Search for Oniro App IDE.
 3. Click Install.
 
 ### From Source (Development)
@@ -57,7 +57,7 @@ code .
 
 ## Usage
 
-1. Install and enable the Oniro IDE extension in VS Code.
+1. Install and enable the Oniro App IDE extension in VS Code.
 2. Use the Oniro sidebar to access all main actions, or open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and search for Oniro commands.
 3. Create a new project:
     - Run **Oniro: Create Project** (`oniro-ide.createProject`).
@@ -66,7 +66,7 @@ code .
     - The extension creates `local.properties` (with `sdk.dir=...`) so the build uses the installed SDK base directory.
 4. Typical workflow:
    - **SDK & Tools Setup**: Open the **SDK Manager** from the sidebar to install or update the required OpenHarmony SDKs, command-line tools, and the Oniro emulator before starting development.
-   - **Signature Configs**: If your application does not already have signing configurations, generate them using the Oniro IDE (see sidebar or command palette for signature config generation commands).
+   - **Signature Configs**: If your application does not already have signing configurations, generate them using the Oniro App IDE (see sidebar or command palette for signature config generation commands).
    - **Build and Sign**: Use **Oniro: Build App** and **Oniro: Sign App** to prepare your application.
    - **Emulator**: Start the emulator with **Oniro: Start Emulator** and connect if needed (**Oniro: Connect Emulator**).
    - **Deploy**: Install your `.hap` package using **Oniro: Install App** and launch it with **Oniro: Launch App**.
@@ -123,4 +123,4 @@ This will let you use F5 or the "Run" button in VS Code to trigger the Oniro "Ru
 - [OpenHarmony Documentation](https://www.openharmony.cn/en/)
 
 
-**Enjoy developing with Oniro IDE!**
+**Enjoy developing with Oniro App IDE!**

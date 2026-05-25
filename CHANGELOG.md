@@ -7,11 +7,15 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [Unreleased]
 
 ### Changed
-- Extension renamed from `oniro-ide` to `oniro-app-ide` to avoid a name conflict with the previously-published `francescopham.oniro-ide` listing. The new install identifier is `oniro.oniro-app-ide` on both registries. The display name "Oniro IDE" is unchanged.
+- Extension renamed from `oniro-ide` to `oniro-app-ide` and display name changed from "Oniro IDE" to "Oniro App IDE" to avoid name/display-name conflicts with the previously-published `francescopham.oniro-ide` listing. The new install identifier is `oniro.oniro-app-ide` on both registries.
+
+## [0.4.1] — broken release, do not use
+
+Renamed the extension to `oniro-app-ide` but the VS Code Marketplace also rejected the display name "Oniro IDE" (already taken by the prior publisher). 0.4.2 supersedes it with display name "Oniro App IDE".
 
 ## [0.4.0] — broken release, do not use
 
-The 0.4.0 release failed mid-publish: it landed on Open VSX as `oniro.oniro-ide@0.4.0` but was rejected by the VS Code Marketplace because the name `oniro-ide` is already owned by another publisher. 0.4.1 supersedes it under the new name `oniro-app-ide`.
+The 0.4.0 release failed mid-publish: it landed on Open VSX as `oniro.oniro-ide@0.4.0` but was rejected by the VS Code Marketplace because the name `oniro-ide` is already owned by another publisher. 0.4.2 supersedes it under the new name `oniro-app-ide` with display name "Oniro App IDE".
 
 ### Added
 - ArkTS language support: grammar, language configuration, language client, and `code-linter.json5` schema validation.
