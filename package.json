@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git"
   },
-  "publisher": "francescopham",
+  "publisher": "oniro",
   "author": "Francesco Pham <francesco.pham1@h-partners.com>",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -224,7 +224,10 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "package": "vsce package",
+    "publish:vscode": "vsce publish",
+    "publish:openvsx": "ovsx publish"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -234,7 +237,9 @@
     "@typescript-eslint/parser": "^8.31.1",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.2.1",
     "eslint": "^9.25.1",
+    "ovsx": "^0.10.1",
     "typescript": "^5.8.3"
   },
   "dependencies": {
