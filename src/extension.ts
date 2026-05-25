@@ -1,11 +1,19 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { onirobuilderBuild, onirobuilderSign } from './utils/onirobuilder';
-import { startEmulator, stopEmulator, attemptHdcConnection } from './utils/emulatorManager';
-import { installApp, launchApp, findAppProcessId } from './utils/hdcManager';
-import { registerHilogViewerCommand } from './hilogViewer';
+import {
+	VERSION,
+	attemptHdcConnection,
+	findAppProcessId,
+	generateSigningConfigs,
+	getOhosBaseSdkHome,
+	installApp,
+	launchApp,
+	startEmulator,
+	stopEmulator,
+} from '@oniroproject/core';
+import { vscodeConfigProvider, vscodeLogger, tokenToSignal } from './adapters';
 import { oniroLogChannel } from './utils/logger';
+import { runBuild, getWorkspaceRoot } from './utils/buildHelpers';
+import { registerHilogViewerCommand } from './hilogViewer';
 import { OniroTreeDataProvider, OniroCommands } from './OniroTreeDataProvider';
 import { registerSdkManagerCommand } from './sdkManager';
 import { OniroDebugConfigurationProvider } from './providers/OniroDebugConfigurationProvider';
@@ -14,35 +22,50 @@ import { registerCreateProjectCommand } from './createProject';
 import { registerBuildConfigCommand } from './buildConfig';
 import { startLanguageClient, stopLanguageClient } from './languageClient';
 
-// Helper function to detect app process ID and open HiLog viewer
-async function detectProcessIdAndShowHilog(token?: vscode.CancellationToken, progress?: vscode.Progress<{ message?: string; increment?: number }>): Promise<void> {
+/**
+ * Wait until hdc successfully connects to the emulator, or until the user cancels.
+ * Polls every 3 seconds — matches the prior UX.
+ */
+async function waitForHdc(
+	progress: vscode.Progress<{ message?: string; increment?: number }>,
+	token: vscode.CancellationToken,
+): Promise<boolean> {
+	while (!token.isCancellationRequested) {
+		progress.report({ message: 'Waiting for HDC connection...' });
+		if (await attemptHdcConnection(vscodeConfigProvider, undefined, vscodeLogger)) {
+			return true;
+		}
+		oniroLogChannel.appendLine('[emulator] Waiting for HDC connection...');
+		await new Promise((resolve) => setTimeout(resolve, 3000));
+	}
+	return false;
+}
+
+async function detectProcessIdAndShowHilog(
+	token?: vscode.CancellationToken,
+	progress?: vscode.Progress<{ message?: string; increment?: number }>,
+): Promise<void> {
 	if (progress) {
 		progress.report({ message: 'Detecting app process ID...' });
 	}
 	oniroLogChannel.appendLine('[Oniro] Detecting app process ID...');
-	
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	if (!workspaceFolders || workspaceFolders.length === 0) {
-		oniroLogChannel.appendLine('[Oniro] No workspace folder found.');
-		throw new Error('No workspace folder found.');
-	}
-	
-	const projectDir = workspaceFolders[0].uri.fsPath;
+
+	const projectDir = getWorkspaceRoot();
 	oniroLogChannel.appendLine('[Oniro] Project directory: ' + projectDir);
-	
+
 	let pid: string;
 	try {
 		if (token) {
 			pid = await Promise.race([
-				findAppProcessId(projectDir),
+				findAppProcessId(vscodeConfigProvider, projectDir, vscodeLogger),
 				new Promise<string>((_, reject) => {
 					token.onCancellationRequested(() => {
 						reject(new Error('Cancelled by user'));
 					});
-				})
+				}),
 			]);
 		} else {
-			pid = await findAppProcessId(projectDir);
+			pid = await findAppProcessId(vscodeConfigProvider, projectDir, vscodeLogger);
 		}
 	} catch (err) {
 		oniroLogChannel.appendLine('[Oniro] ' + err);
@@ -54,21 +77,26 @@ async function detectProcessIdAndShowHilog(token?: vscode.CancellationToken, pro
 		}
 		throw err;
 	}
-	
-	if (token?.isCancellationRequested) {return;}
-	
-	// Open HiLog viewer and start logging using the main command, passing processId and severity
+
+	if (token?.isCancellationRequested) { return; }
+
 	vscode.commands.executeCommand('oniro-ide.showHilogViewer', { processId: pid, severity: 'INFO' });
 }
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	oniroLogChannel.appendLine(`[info] @oniroproject/core ${VERSION} loaded.`);
 	startLanguageClient(context);
 
 	const signDisposable = vscode.commands.registerCommand(OniroCommands.SIGN, async () => {
 		try {
-			await onirobuilderSign();
+			const projectDir = getWorkspaceRoot();
+			oniroLogChannel.appendLine('[sign] Generating signing configs...');
+			generateSigningConfigs({
+				projectDir,
+				sdkHome: getOhosBaseSdkHome(vscodeConfigProvider),
+				logger: vscodeLogger,
+			});
+			oniroLogChannel.appendLine('[sign] Signing config generation complete.');
 			vscode.window.showInformationMessage('Signing completed!');
 		} catch (err) {
 			vscode.window.showErrorMessage(`Signing failed: ${err}`);
@@ -77,7 +105,19 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const startEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.START_EMULATOR, async () => {
 		try {
-			await startEmulator();
+			await startEmulator({ config: vscodeConfigProvider, logger: vscodeLogger });
+			await vscode.window.withProgress({
+				title: 'Oniro Emulator: Connecting HDC',
+				location: vscode.ProgressLocation.Notification,
+				cancellable: true,
+			}, async (progress, token) => {
+				const connected = await waitForHdc(progress, token);
+				if (connected) {
+					vscode.window.showInformationMessage('HDC connected!');
+				} else {
+					oniroLogChannel.appendLine('[emulator] HDC connection cancelled by user.');
+				}
+			});
 		} catch (err) {
 			vscode.window.showErrorMessage(`Failed to start emulator: ${err}`);
 		}
@@ -85,7 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const stopEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.STOP_EMULATOR, async () => {
 		try {
-			await stopEmulator();
+			await stopEmulator(vscodeLogger);
 			vscode.window.showInformationMessage('Emulator stopped successfully!');
 		} catch (err) {
 			vscode.window.showErrorMessage(`Failed to stop emulator: ${err}`);
@@ -94,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const connectEmulatorDisposable = vscode.commands.registerCommand(OniroCommands.CONNECT_EMULATOR, async () => {
 		try {
-			const connected = await attemptHdcConnection();
+			const connected = await attemptHdcConnection(vscodeConfigProvider, undefined, vscodeLogger);
 			if (connected) {
 				vscode.window.showInformationMessage('Emulator connected successfully!');
 			} else {
@@ -107,7 +147,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const installDisposable = vscode.commands.registerCommand(OniroCommands.INSTALL_APP, async () => {
 		try {
-			await installApp();
+			const projectDir = getWorkspaceRoot();
+			await installApp({
+				config: vscodeConfigProvider,
+				projectDir,
+				logger: vscodeLogger,
+			});
 			vscode.window.showInformationMessage('App installed successfully!');
 		} catch (err) {
 			vscode.window.showErrorMessage(`Failed to install app: ${err}`);
@@ -116,10 +161,14 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const launchDisposable = vscode.commands.registerCommand(OniroCommands.LAUNCH_APP, async () => {
 		try {
-			await launchApp();
+			const projectDir = getWorkspaceRoot();
+			await launchApp({
+				config: vscodeConfigProvider,
+				projectDir,
+				logger: vscodeLogger,
+			});
 			vscode.window.showInformationMessage('App launched successfully!');
-			
-			// Detect process ID and show HiLog viewer
+
 			try {
 				await detectProcessIdAndShowHilog();
 				vscode.window.showInformationMessage('HiLog viewer opened with app process ID.');
@@ -135,30 +184,41 @@ export function activate(context: vscode.ExtensionContext) {
 		const progressOptions = {
 			title: 'Oniro: Running All Steps',
 			location: vscode.ProgressLocation.Notification,
-			cancellable: true // Allow cancellation
+			cancellable: true,
 		};
 		await vscode.window.withProgress(progressOptions, async (progress, token) => {
+			const bridge = tokenToSignal(token);
 			try {
-				progress.report({ message: 'Starting emulator...' });
-				await startEmulator();
-				if (token.isCancellationRequested) {return;}
-				progress.report({ message: 'Connecting to emulator...' });
-				await attemptHdcConnection();
-				if (token.isCancellationRequested) {return;}
-				progress.report({ message: 'Waiting for emulator to boot...' });
-				await new Promise(resolve => setTimeout(resolve, 10000));
-				if (token.isCancellationRequested) {return;}
-				progress.report({ message: 'Building app...' });
-				await onirobuilderBuild();
-				if (token.isCancellationRequested) {return;}
-				progress.report({ message: 'Installing app...' });
-				await installApp();
-				if (token.isCancellationRequested) {return;}
-				progress.report({ message: 'Launching app...' });
-				await launchApp();
-				if (token.isCancellationRequested) {return;}
+				const projectDir = getWorkspaceRoot();
 
-				// Detect process ID and open HiLog viewer
+				progress.report({ message: 'Starting emulator...' });
+				await startEmulator({
+					config: vscodeConfigProvider,
+					logger: vscodeLogger,
+					abortSignal: bridge.signal,
+				});
+				if (token.isCancellationRequested) { return; }
+
+				progress.report({ message: 'Connecting to emulator...' });
+				await attemptHdcConnection(vscodeConfigProvider, undefined, vscodeLogger);
+				if (token.isCancellationRequested) { return; }
+
+				progress.report({ message: 'Waiting for emulator to boot...' });
+				await new Promise((resolve) => setTimeout(resolve, 10000));
+				if (token.isCancellationRequested) { return; }
+
+				progress.report({ message: 'Building app...' });
+				await runBuild({ projectDir });
+				if (token.isCancellationRequested) { return; }
+
+				progress.report({ message: 'Installing app...' });
+				await installApp({ config: vscodeConfigProvider, projectDir, logger: vscodeLogger });
+				if (token.isCancellationRequested) { return; }
+
+				progress.report({ message: 'Launching app...' });
+				await launchApp({ config: vscodeConfigProvider, projectDir, logger: vscodeLogger });
+				if (token.isCancellationRequested) { return; }
+
 				await detectProcessIdAndShowHilog(token, progress);
 
 				vscode.window.showInformationMessage('Oniro: All steps completed successfully! Logs are now streaming.');
@@ -168,26 +228,25 @@ export function activate(context: vscode.ExtensionContext) {
 					return;
 				}
 				vscode.window.showErrorMessage(`Oniro: Run All failed: ${err}`);
+			} finally {
+				bridge.dispose();
 			}
 		});
 	});
 
-	// Register Oniro Tree View
 	const oniroTreeDataProvider = new OniroTreeDataProvider();
 	vscode.window.registerTreeDataProvider('oniroMainView', oniroTreeDataProvider);
 	vscode.commands.registerCommand('oniro-ide.refreshTreeView', () => oniroTreeDataProvider.refresh());
 
-	// Register Oniro DebugConfigurationProvider
 	context.subscriptions.push(
 		vscode.debug.registerDebugConfigurationProvider(
 			'oniro-debug',
-			new OniroDebugConfigurationProvider()
-		)
+			new OniroDebugConfigurationProvider(),
+		),
 	);
 
-	// Register Oniro Task Provider
 	context.subscriptions.push(
-		vscode.tasks.registerTaskProvider('oniro', new OniroTaskProvider())
+		vscode.tasks.registerTaskProvider('oniro', new OniroTaskProvider()),
 	);
 
 	registerHilogViewerCommand(context);
@@ -202,11 +261,10 @@ export function activate(context: vscode.ExtensionContext) {
 		connectEmulatorDisposable,
 		installDisposable,
 		launchDisposable,
-		runAllDisposable
+		runAllDisposable,
 	);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate(): Thenable<void> | undefined {
 	return stopLanguageClient();
 }

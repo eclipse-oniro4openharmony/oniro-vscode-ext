@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as json5 from 'json5';
+import { readJson5File } from '@oniroproject/core';
 import { oniroLogChannel } from './utils/logger';
-import { onirobuilderBuildWithParams } from './utils/onirobuilder';
+import { getWorkspaceRoot, runBuild } from './utils/buildHelpers';
 
 type BuildProfile = {
 	app?: {
@@ -15,19 +15,6 @@ type BuildProfile = {
 };
 
 type OhPackage = Record<string, unknown>;
-
-function readJson5File<T>(filePath: string): T {
-	const content = fs.readFileSync(filePath, 'utf8');
-	return json5.parse(content) as T;
-}
-
-function getWorkspaceRoot(): string {
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	if (!workspaceFolders || workspaceFolders.length === 0) {
-		throw new Error('No workspace folder found.');
-	}
-	return workspaceFolders[0].uri.fsPath;
-}
 
 function loadBuildProfile(projectDir: string): BuildProfile {
 	const buildProfilePath = path.join(projectDir, 'build-profile.json5');
@@ -120,12 +107,13 @@ export function registerBuildConfigCommand(context: vscode.ExtensionContext): vo
 				}
 				if (message?.command === 'build') {
 					try {
-						await onirobuilderBuildWithParams({
+						await runBuild({
+							projectDir,
 							product: message?.data?.product,
 							module: message?.data?.module,
-							buildMode: message?.data?.buildMode
+							buildMode: message?.data?.buildMode,
 						});
-						vscode.window.showInformationMessage('Build started.');
+						vscode.window.showInformationMessage('Build complete.');
 					} catch (err) {
 						const errMsg = err instanceof Error ? err.message : String(err);
 						vscode.window.showErrorMessage(`Build failed: ${errMsg}`);
