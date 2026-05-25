@@ -1,13 +1,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
-import { getOhosBaseSdkHome, detectProjectSdkVersion } from './utils/sdkUtils';
+import { detectProjectSdkVersion, getOhosBaseSdkHome } from '@oniroproject/core';
+import { vscodeConfigProvider, vscodeLogger } from './adapters';
 
 let client: LanguageClient;
 
 export function startLanguageClient(context: vscode.ExtensionContext) {
-    // Determine the path to the language server entry point
-    // Using require.resolve to find the @arkts/language-server bin script
     let serverModule;
     try {
         const serverRoot = path.dirname(require.resolve('@arkts/language-server'));
@@ -23,45 +22,45 @@ export function startLanguageClient(context: vscode.ExtensionContext) {
         debug: {
             module: serverModule,
             transport: TransportKind.ipc,
-            options: debugOptions
-        }
+            options: debugOptions,
+        },
     };
 
     const clientOptions: LanguageClientOptions = {
         documentSelector: [
             { language: 'ets' },
             { language: 'json' },
-            { pattern: '**/*.json5' }
+            { pattern: '**/*.json5' },
         ],
         synchronize: {
             fileEvents: [
                 vscode.workspace.createFileSystemWatcher('**/*.ets'),
                 vscode.workspace.createFileSystemWatcher('**/*.json'),
-                vscode.workspace.createFileSystemWatcher('**/*.json5')
-            ]
+                vscode.workspace.createFileSystemWatcher('**/*.json5'),
+            ],
         },
         initializationOptions: {
             ets: {
-                // If API version is found, append it to the base SDK home (e.g. linux/20). Otherwise pass the base home or append '12' as fallback.
                 sdkPath: (() => {
+                    const baseSdkHome = getOhosBaseSdkHome(vscodeConfigProvider);
                     const workspaceFolders = vscode.workspace.workspaceFolders;
                     if (workspaceFolders && workspaceFolders.length > 0) {
-                        const apiVersion = detectProjectSdkVersion(workspaceFolders[0].uri.fsPath);
+                        const apiVersion = detectProjectSdkVersion(workspaceFolders[0].uri.fsPath, vscodeLogger);
                         if (apiVersion !== undefined) {
-                            return path.join(getOhosBaseSdkHome(), String(apiVersion));
+                            return path.join(baseSdkHome, String(apiVersion));
                         }
                     }
-                    return getOhosBaseSdkHome();
-                })()
-            }
-        }
+                    return baseSdkHome;
+                })(),
+            },
+        },
     };
 
     client = new LanguageClient(
         'ets-language-server',
         'ETS Language Server',
         serverOptions,
-        clientOptions
+        clientOptions,
     );
 
     client.start();
