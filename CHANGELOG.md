@@ -6,11 +6,17 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.5.0]
+
 ### Added
 - `oniro.tmpDir` setting: directory used for temporary files while downloading and extracting the SDK, command-line tools, and emulator. Leave empty to use a `.oniro-tmp` folder next to the install target.
 
 ### Changed
 - Updated `@oniroproject/core` to 0.8.0. Installs now unpack next to their install target rather than in the system temp dir, which fixes SDK and command-line-tools installs failing on Linux systems where `/tmp` is a RAM-backed `tmpfs` smaller than the archive. Running out of space is now reported with the directory, the space needed, and how to change it, instead of failing with an unhandled error.
+
+## [0.4.2]
+
+### Changed
 - Extension renamed from `oniro-ide` to `oniro-app-ide` and display name changed from "Oniro IDE" to "Oniro App IDE" to avoid name/display-name conflicts with the previously-published `francescopham.oniro-ide` listing. The new install identifier is `oniro.oniro-app-ide` on both registries.
 
 ## [0.4.1] — broken release, do not use
