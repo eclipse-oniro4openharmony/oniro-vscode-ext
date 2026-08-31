@@ -133,7 +133,7 @@ async function startHilogStream(
 	let leftover = '';
 	hdcProcess.stdout.on('data', (data: Buffer) => {
 		const chunk = leftover + data.toString();
-		const lines = chunk.split('\n');
+		const lines = chunk.split(/\r?\n/);
 		leftover = lines.pop() || '';
 		for (const line of lines) {
 			const parsed = parseHilogLine(line);
