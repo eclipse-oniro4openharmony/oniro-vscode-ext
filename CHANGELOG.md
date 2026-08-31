@@ -6,6 +6,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.6.1]
+
+### Fixed
+- Hilog viewer: log lines are now split on CRLF as well as LF, fixing garbled entries on Windows. 0.6.0 fixed this in `@oniroproject/core`, but the extension's own hilog stream parser still split on LF only.
+
 ## [0.6.0]
 
 ### Changed
