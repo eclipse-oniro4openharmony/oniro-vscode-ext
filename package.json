@@ -2,7 +2,7 @@
   "name": "oniro-app-ide",
   "displayName": "Oniro App IDE",
   "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git"
@@ -251,7 +251,7 @@
     "@arkts/language-plugin": "^1.3.3",
     "@arkts/language-server": "^1.3.8",
     "@arkts/language-service": "^1.3.8",
-    "@oniroproject/core": "^0.8.0",
+    "@oniroproject/core": "^0.10.0",
     "vscode-languageclient": "^9.0.1"
   }
 }

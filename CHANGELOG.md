@@ -6,6 +6,13 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.6.0]
+
+### Changed
+- Updated `@oniroproject/core` to 0.10.0.
+  - Windows: process launching now goes through a `cmd` wrapper with proper argument escaping, child process trees are terminated correctly, long paths are handled, and `hvigorw` resolves to `hvigorw.bat`. The extension delegates all process execution to core, so it inherits these. Not yet validated end-to-end on Windows.
+  - Log and device output is now split on CRLF as well as LF, fixing garbled entries in the hilog viewer and in device listing on Windows.
+
 ## [0.5.0]
 
 ### Added
