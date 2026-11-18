@@ -1,6 +1,7 @@
 import * as os from 'os';
 import * as vscode from 'vscode';
 import type { ConfigKey, ConfigProvider } from '@oniroproject/core';
+import { isScaffoldHapPath } from '../utils/project';
 
 export const vscodeConfigProvider: ConfigProvider = {
     get<T extends string | number | boolean>(key: ConfigKey, fallback: T): T {
@@ -9,6 +10,12 @@ export const vscodeConfigProvider: ConfigProvider = {
 
         if (typeof value === 'string' && value.includes('${userHome}')) {
             value = value.replace(/\$\{userHome\}/g, os.homedir()) as T;
+        }
+
+        // Projects created before 0.7.1 carry a generated hapPath in their workspace
+        // settings; honouring it would stop core from finding the HAP the build produced.
+        if (key === 'hapPath' && isScaffoldHapPath(value)) {
+            return fallback;
         }
 
         if (value === undefined || value === null || value === '') {

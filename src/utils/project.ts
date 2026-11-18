@@ -105,3 +105,35 @@ export function isCancellation(err: unknown): boolean {
         || err.message === 'Download cancelled'
         || err.message === 'Cancelled by user';
 }
+
+/**
+ * Whether `value` is the `oniro.hapPath` that project scaffolding writes into a new
+ * project's `.vscode/settings.json` (`<module>/build/default/outputs/default/<module>-default-signed.hap`).
+ * Setting `oniro.hapPath` makes core install exactly that file and skip finding what
+ * the build produced, so this generated value is treated as unset. Pure.
+ */
+export function isScaffoldHapPath(value: unknown): boolean {
+    return typeof value === 'string'
+        && /^([\w.-]+)\/build\/default\/outputs\/default\/\1-default-signed\.hap$/.test(value.trim());
+}
+
+/**
+ * Remove the generated `oniro.hapPath` from a project's `.vscode/settings.json`,
+ * keeping every other setting. Leaves the file alone when it is not plain JSON or
+ * the value was changed by hand. Returns true when it removed the setting.
+ */
+export function dropScaffoldHapPath(projectDir: string): boolean {
+    const file = path.join(projectDir, '.vscode', 'settings.json');
+    let settings: Record<string, unknown>;
+    try {
+        settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+        return false;
+    }
+    if (!settings || typeof settings !== 'object' || !isScaffoldHapPath(settings['oniro.hapPath'])) {
+        return false;
+    }
+    delete settings['oniro.hapPath'];
+    fs.writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
+    return true;
+}

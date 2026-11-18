@@ -71,7 +71,9 @@ Tests:
 ```bash
 npm test                    # unit tests and activation (no SDK or device needed)
 npm run test:integration    # against the real toolchain: SDK API 23, command-line tools,
-                            # java, and a connected device or running Oniro emulator
+                            # java, and a running Oniro emulator (device tests install,
+                            # launch and crash a test app; to use another device, set
+                            # ONIRO_TEST_DEVICE_SERIAL)
 ```
 
 On Linux without a display, prefix them with `xvfb-run -a` (and unset `WAYLAND_DISPLAY` under a Wayland session).

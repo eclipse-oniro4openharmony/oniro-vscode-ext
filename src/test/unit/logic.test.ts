@@ -1,4 +1,7 @@
 import * as assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import type { BuildDiagnostic, CrashVerdict, DoctorReport } from '@oniroproject/core';
 import { parseHypiumFile, stackLocation } from '../../testing';
@@ -6,6 +9,8 @@ import { toVscodeDiagnostic } from '../../diagnostics';
 import { renderCrashReport } from '../../appCommands';
 import { renderDoctorReport } from '../../doctor';
 import { lineAfterImports } from '../../knowledge';
+import { vscodeConfigProvider } from '../../adapters';
+import { dropScaffoldHapPath, isScaffoldHapPath } from '../../utils/project';
 import { codeBlock, escapeMd } from '../../report';
 
 suite('parseHypiumFile', () => {
@@ -153,5 +158,54 @@ suite('reports', () => {
 		assert.ok(md.includes('problems found'));
 		assert.ok(md.includes('| ❌ | Java (signing) | java not found | Install a JDK |'));
 		assert.ok(md.includes('**Node.js:** v24'));
+	});
+});
+
+suite('scaffold hapPath', () => {
+	test('recognises only the generated value', () => {
+		assert.ok(isScaffoldHapPath('entry/build/default/outputs/default/entry-default-signed.hap'));
+		assert.ok(isScaffoldHapPath('feature/build/default/outputs/default/feature-default-signed.hap'));
+		assert.ok(!isScaffoldHapPath('entry/build/default/outputs/default/other-default-signed.hap'));
+		assert.ok(!isScaffoldHapPath('entry/build/oniro/outputs/oniro/entry-oniro-signed.hap'));
+		assert.ok(!isScaffoldHapPath('/abs/app.hap'));
+		assert.ok(!isScaffoldHapPath(''));
+		assert.ok(!isScaffoldHapPath(undefined));
+	});
+
+	test('dropScaffoldHapPath removes it and keeps the other settings', () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oniro-hap-'));
+		try {
+			fs.mkdirSync(path.join(dir, '.vscode'));
+			const file = path.join(dir, '.vscode', 'settings.json');
+			fs.writeFileSync(file, JSON.stringify({
+				'oniro.hapPath': 'entry/build/default/outputs/default/entry-default-signed.hap',
+				'files.associations': { '*.json5': 'jsonc' },
+			}));
+			assert.strictEqual(dropScaffoldHapPath(dir), true);
+			assert.deepStrictEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { 'files.associations': { '*.json5': 'jsonc' } });
+			assert.strictEqual(dropScaffoldHapPath(dir), false);
+
+			const custom = { 'oniro.hapPath': 'out/my.hap' };
+			fs.writeFileSync(file, JSON.stringify(custom));
+			assert.strictEqual(dropScaffoldHapPath(dir), false);
+			assert.deepStrictEqual(JSON.parse(fs.readFileSync(file, 'utf8')), custom);
+
+			fs.writeFileSync(file, '{ // a comment\n "oniro.hapPath": "entry/build/default/outputs/default/entry-default-signed.hap" }');
+			assert.strictEqual(dropScaffoldHapPath(dir), false, 'JSONC is left alone');
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('the config provider treats a generated hapPath as unset', async () => {
+		const config = vscode.workspace.getConfiguration('oniro');
+		try {
+			await config.update('hapPath', 'entry/build/default/outputs/default/entry-default-signed.hap', vscode.ConfigurationTarget.Global);
+			assert.strictEqual(vscodeConfigProvider.get('hapPath', ''), '');
+			await config.update('hapPath', 'out/my.hap', vscode.ConfigurationTarget.Global);
+			assert.strictEqual(vscodeConfigProvider.get('hapPath', ''), 'out/my.hap');
+		} finally {
+			await config.update('hapPath', undefined, vscode.ConfigurationTarget.Global);
+		}
 	});
 });
