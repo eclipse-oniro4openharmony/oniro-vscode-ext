@@ -1,30 +1,51 @@
 # Oniro App IDE
 
-Oniro App IDE is a lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development. It provides a streamlined workflow for building, signing, deploying, running, and debugging Oniro apps, as well as managing SDKs and emulators.
+Oniro App IDE is a lightweight IDE, as a Visual Studio Code extension, for Oniro/OpenHarmony and HarmonyOS application development. It covers the whole loop: create a project, check and build it, sign it, run it on a device or the Oniro emulator, follow its log, run its tests and explain its crashes. It also manages the SDKs, the command-line tools and the emulator.
+
+Under the hood it uses [`@oniroproject/core`](https://www.npmjs.com/package/@oniroproject/core), the library behind the [`oniro-app`](https://www.npmjs.com/package/@oniroproject/oniro-app) CLI, so the extension and the CLI behave the same way and share their installs, signing material and Huawei sign-in.
 
 ![screencast](./media/screencast_readme.gif)
 
 ## Features
 
-- **Oniro Tree View**: Access all Oniro development actions from a dedicated sidebar, including build, sign, emulator control, app install/launch, SDK Manager, and HiLog Viewer.
-- **Project Creation**: Create a new Oniro/OpenHarmony (ArkTS/ArkUI) project from a template, with initial SDK/module configuration and workspace settings.
-- **Build and Sign**: Compile and sign your Oniro/OpenHarmony application with a single command.
-- **Emulator Management**: Start, stop, and connect to the Oniro emulator directly from VS Code.
-- **App Deployment**: Install and launch `.hap` packages on the emulator or connected device.
-- **Run All**: One-click workflow to start the emulator, build, install, and launch your app, then open the HiLog Viewer for live logs.
-- **HiLog Viewer**: View and filter real-time logs from your running Oniro app within VS Code.
-- **SDK Manager**: Install, update, or remove OpenHarmony SDKs, command-line tools, and the Oniro emulator via a graphical interface.
-- **ArkTS Language Support**: Built-in syntax highlighting, autocomplete, code navigation, and linting for `.ets` files using the OpenHarmony SDK.
-- **Oniro Tasks**: Run Oniro-specific build tasks from the VS Code task system.
-- **Debugging**: Debug Oniro applications using the "Oniro Debug" configuration.
+### Build and check
+- **Run** (`Ctrl+F5`, or the ▶ button in the Oniro view and on `.ets` editors): builds, installs and launches the app on the target device, then opens the HiLog viewer on its process. When no device is connected it starts the Oniro emulator and waits until it has booted.
+- **Build**, with errors and warnings in the **Problems panel**: ArkTS compiler and linter errors, hvigor configuration errors, native (clang/lld) errors and ohpm errors, each at its file and line. When the project's SDK is not installed, the build offers to install it. **Build…** lets you pick the product, module and build mode.
+- **Check ArkTS**: the SDK's own ArkTS type check and linter, plus the ArkUI rules hvigor enforces later, in seconds and without a build. **Fix ArkTS Problems** applies the fixes the checker can verify. Turn on `oniro.checkArktsOnSave` to check each `.ets` file when you save it.
+- **Tasks**: `oniro: build` (offered by **Run Build Task**, `Ctrl+Shift+B`) and `oniro: check ArkTS`, both reporting to the Problems panel.
+
+### Sign
+- **Sign Project**: offline OpenHarmony development signing configs. For a HarmonyOS product (`runtimeOS: "HarmonyOS"`), it gets a debug certificate and profile from AppGallery Connect with your Huawei developer account (**Sign In to Huawei Developer Account**; the sign-in is shared with `oniro-app auth login`).
+- **Sign HAP…** and **Verify HAP Signature…**: sign a prebuilt `.hap` with no project, or check what signed one (certificate chain, profile type, bundle, APL, devices and expiry). Both are also in the Explorer context menu on `.hap` files.
+
+### Run on a device
+- **Target device** in the status bar and the sidebar: pick which connected device (or emulator) the commands use. The choice is also exported to integrated terminals as `ONIRO_DEVICE_SERIAL`, so `oniro-app` run there targets the same device.
+- **Install**, **Launch**, **Stop** and **Uninstall** the app. When the installed copy was signed with other material, Install offers to uninstall it first instead of failing.
+- **Take Device Screenshot**: opens the capture in an editor tab, with Save As.
+- **HiLog Viewer**: real-time device log, filtered by process, level, tag and message.
+- **Show Last Crash**: fetches the app's newest fault log (JS crash, native crash or app freeze) and explains it: the reason, the error and stack, and a link to the first line of **your** code involved, which is also opened in the editor.
+
+### Test
+- **Test Explorer** integration for `ohosTest` suites: suites and cases are read from `src/ohosTest`, and running them builds the main and test HAPs, installs both and runs the selected suites on the device with `aa test`. Failures link to the assertion's line.
+
+### Emulator and SDKs
+- **Emulator**: start (waiting for boot to complete), stop and connect, with its status in the sidebar. On Apple Silicon and arm64 Linux the arm64 Oniro emulator is installed.
+- **SDK Manager**: install and remove OpenHarmony SDKs, the command-line tools (with their version and edition) and the emulator. **Install from archive…** installs a local SDK `.tar.gz`, such as the full SDK (with system APIs) from the OpenHarmony daily builds. The HarmonyOS SDK in use is shown too.
+- **Doctor**: one verdict on whether this machine can build, sign, install and test the project (node, java, SDK, command-line tools and their edition, the ArkTS checker, hdc, the device, signing material, disk space), with a fix for each problem. Results also appear in the sidebar.
+
+### Write code
+- **ArkTS language support**: syntax highlighting, completion, navigation and diagnostics for `.ets` files against the project's SDK.
+- **Search SDK API**: ranked search of what the project's SDK declares (ArkTS APIs, ArkUI components and decorators, Node-API), with the kit, `@since`, deprecation and how to import each symbol. Open the declaration, or insert its import into the current file.
+- **Search OpenHarmony Docs**: full-text search of the application-development documentation of the release your SDK belongs to, opened in the Markdown preview. The docs are downloaded on first use (a partial clone of about 100 MB; needs `git`).
+- **Create Project** from the Empty Ability, Native C++ or HarmonyOS App template.
 
 ## Requirements
 
-- Node.js (LTS recommended)
-- Java SDK (for building/signing apps)
-- QEMU (for running the Oniro emulator)
+- Java (for signing)
+- QEMU (for the Oniro emulator)
+- git (only for Search OpenHarmony Docs)
 
-Ensure all dependencies are installed and available in your `PATH`.
+The OpenHarmony SDK, the command-line tools and the emulator can all be installed from the SDK Manager. Run **Oniro: Run Doctor** to check the setup.
 
 ## Installation
 
@@ -34,93 +55,76 @@ Install Oniro App IDE from either:
 - Visual Studio Code Marketplace: https://marketplace.visualstudio.com/items?itemName=oniro.oniro-app-ide
 - Open VSX Registry (for VSCodium / compatible IDEs): https://open-vsx.org/extension/oniro/oniro-app-ide
 
-Steps (VS Code or compatible):
-1. Open the Extensions view (Ctrl+Shift+X).
-2. Search for Oniro App IDE.
-3. Click Install.
-
 ### From Source (Development)
 
 ```bash
-# Clone the repository
 git clone https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git
-cd oniro-ide
-
-# Install dependencies and build
+cd oniro-vscode-ext
 npm install
 npm run compile
-
-# Open in VS Code and launch extension host
 code .
 # Press F5 to start the Extension Development Host
 ```
 
+Tests:
+
+```bash
+npm test                    # unit tests and activation (no SDK or device needed)
+npm run test:integration    # against the real toolchain: SDK API 23, command-line tools,
+                            # java, and a connected device or running Oniro emulator
+```
+
+On Linux without a display, prefix them with `xvfb-run -a` (and unset `WAYLAND_DISPLAY` under a Wayland session).
+
 ## Usage
 
-1. Install and enable the Oniro App IDE extension in VS Code.
-2. Use the Oniro sidebar to access all main actions, or open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and search for Oniro commands.
-3. Create a new project:
-    - Run **Oniro: Create Project** (`oniro-ide.createProject`).
-    - Choose a template, project name, bundle name, location, SDK API, and module name.
-    - Click **Create** and then **Open Project**.
-    - The extension creates `local.properties` (with `sdk.dir=...`) so the build uses the installed SDK base directory.
-4. Typical workflow:
-   - **SDK & Tools Setup**: Open the **SDK Manager** from the sidebar to install or update the required OpenHarmony SDKs, command-line tools, and the Oniro emulator before starting development.
-   - **Signature Configs**: If your application does not already have signing configurations, generate them using the Oniro App IDE (see sidebar or command palette for signature config generation commands).
-   - **Build and Sign**: Use **Oniro: Build App** and **Oniro: Sign App** to prepare your application.
-   - **Emulator**: Start the emulator with **Oniro: Start Emulator** and connect if needed (**Oniro: Connect Emulator**).
-   - **Deploy**: Install your `.hap` package using **Oniro: Install App** and launch it with **Oniro: Launch App**.
-   - **Run All**: Use **Oniro: Run All (Emulator, Build, Install, Launch)** for a full automated flow, including log streaming.
-   - **HiLog Viewer**: View logs for your running app with **Oniro: Show HiLog Viewer**.
+1. Open the **Oniro** view in the activity bar.
+2. Install what you need from the **SDK Manager**, or run **Doctor** to see what is missing.
+3. **Create Project**, or open an existing OpenHarmony/HarmonyOS project (a folder with `build-profile.json5`).
+4. Press **Run** (`Ctrl+F5`). The first build offers to create signing configs when the project has none.
 
-## Available Commands
-
-- `oniro-ide.createProject`: Create a new Oniro project from template
-- `oniro-ide.runAll`: Run all steps (start emulator, build, install, launch, and open HiLog Viewer)
-- `oniro-ide.build`: Build the Oniro app
-- `oniro-ide.sign`: Sign the Oniro app
-- `oniro-ide.startEmulator`: Start the Oniro emulator
-- `oniro-ide.stopEmulator`: Stop the Oniro emulator
-- `oniro-ide.connectEmulator`: Connect to the running emulator
-- `oniro-ide.installApp`: Install the app on the emulator/device
-- `oniro-ide.launchApp`: Launch the app on the emulator/device
-- `oniro-ide.openSdkManager`: Open the Oniro SDK Manager
-- `oniro-ide.showHilogViewer`: Open the Oniro HiLog log viewer
+All commands are in the Command Palette under **Oniro:**.
 
 ## Extension Settings
 
-This extension contributes the following settings (see VS Code settings for details):
+| Setting | Default | Description |
+|---|---|---|
+| `oniro.sdkRootDir` | `${userHome}/setup-ohos-sdk` | Where OpenHarmony SDKs are installed. |
+| `oniro.cmdToolsPath` | `${userHome}/command-line-tools` | Where the command-line tools are installed. |
+| `oniro.emulatorDir` | `${userHome}/oniro-emulator` | Where the Oniro emulator is installed. |
+| `oniro.emulatorUrl` | *(empty)* | Emulator archive URL. Empty: the latest release for this machine's architecture. |
+| `oniro.cmdToolsUrlLinux` / `…Windows` / `…Mac` | *(empty)* | Command-line tools download URL per OS. Windows and macOS builds must be downloaded by hand; the SDK Manager then asks for the ZIP. |
+| `oniro.hapPath` | *(empty)* | HAP to install, relative to the project. Empty: what the last build produced. |
+| `oniro.hdcPath` | *(empty)* | hdc binary. Empty: the one in the command-line tools or SDK. |
+| `oniro.harmonyosSdkPath` | *(empty)* | HarmonyOS SDK location. Empty: DevEco Studio or the HarmonyOS command-line tools, found automatically. |
+| `oniro.sdkUrlBase` | *(empty)* | OpenHarmony SDK mirror. Empty: Huawei Cloud. |
+| `oniro.docsDir` | *(empty)* | Where Search Docs downloads the docs. Empty: `<sdkRootDir>/docs`. |
+| `oniro.tmpDir` | *(empty)* | Scratch space for downloads and extraction. Empty: `.oniro-tmp` next to the install target. |
+| `oniro.emulatorBootTimeout` | `240` | Seconds to wait for the emulator to boot. |
+| `oniro.checkArktsOnSave` | `false` | Check each saved `.ets` file with the ArkTS checker. |
+| `oniro.openHilogOnLaunch` | `true` | Open the HiLog viewer on the app after launching it. |
+| `ets.linterVersion` | `1.1` | ArkTS linter version used by the language server (`off` disables it). |
 
-- `oniro.sdkRootDir`: Root directory where OpenHarmony SDKs are installed. Default: `${userHome}/setup-ohos-sdk`
-- `oniro.cmdToolsPath`: Directory where OpenHarmony command-line tools are installed. Default: `${userHome}/command-line-tools`
-- `oniro.emulatorDir`: Directory where Oniro emulator is installed. Default: `${userHome}/oniro-emulator`
+## `launch.json`
 
-## Known Issues
-
-Please report issues and feature requests via the GitHub repository.
-
-## Suggested `launch.json` Configuration
-
-To allow the integrated F5 launch shortcut to automatically execute the Oniro "Run All" workflow, add the following configuration to your `.vscode/launch.json` file:
+To run the app with F5, add an `oniro-debug` configuration. It runs **Oniro: Run** (there is no ArkTS debugger yet, so no debug session is started):
 
 ```json
 {
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Oniro: Launch App (with Run All)",
-            "type": "oniro-debug",
-            "request": "launch"
-        }
+        { "name": "Run Oniro App", "type": "oniro-debug", "request": "launch" }
     ]
 }
 ```
 
-This will let you use F5 or the "Run" button in VS Code to trigger the Oniro "Run All" command for building, deploying, and launching your app.
+## Known Issues
+
+- Command-line tools 6.1.1 (hvigor 6.24.2) cannot build projects targeting OpenHarmony API 26 (7.0). Create Project therefore defaults to the newest installed SDK the installed tools can build.
+- HarmonyOS signing and the Windows/macOS flows have not been validated end to end from the extension yet.
+
+Please report issues and feature requests on the GitHub repository.
 
 ## For more information
 - [Oniro Project](https://oniroproject.org/)
 - [OpenHarmony Documentation](https://www.openharmony.cn/en/)
-
-
-**Enjoy developing with Oniro App IDE!**

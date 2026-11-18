@@ -37,6 +37,9 @@ jobs:
       - name: Compile
         run: npm run compile
 
+      - name: Unit tests
+        run: xvfb-run -a npx vscode-test --label unit
+
       - name: Package VSIX
         id: package
         run: |

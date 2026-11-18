@@ -3,7 +3,7 @@
     "name": "entry_test",
     "type": "feature",
     "deviceTypes": [
-      "phone"
+      "default"
     ],
     "deliveryWithInstall": true,
     "installationFree": false

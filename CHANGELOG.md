@@ -6,6 +6,39 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Added
+- Build errors and warnings in the Problems panel (ArkTS, hvigor, native, ohpm), from core's `buildWithDiagnostics`. A build of a project whose SDK is missing offers to install it; a project without signing configs is offered signing first. Builds are cancellable.
+- **Check ArkTS** and **Fix ArkTS Problems**: the SDK's ArkTS checker and the ArkUI rules, without a build, into the Problems panel. `oniro.checkArktsOnSave` checks each saved `.ets` file.
+- **Target device** selection (status bar, sidebar, **Select Target Device**), applied to every device command and exported to integrated terminals as `ONIRO_DEVICE_SERIAL`.
+- **Stop App**, **Uninstall App**, **Take Device Screenshot** and **Show Last Crash** (faultlog analysis with a link to the project line involved).
+- Test Explorer integration for `ohosTest` suites, run on the device through core's `runTests`.
+- **Run Doctor**: toolchain health check with fixes, also shown in the sidebar.
+- HarmonyOS: **Sign Project** signs HarmonyOS products with AppGallery Connect debug material; **Sign In/Out of Huawei Developer Account**.
+- **Sign HAP…** and **Verify HAP Signature…** for prebuilt HAPs (also in the Explorer context menu).
+- **Search SDK API** (with insert-import) and **Search OpenHarmony Docs** (with on-demand docs download).
+- SDK Manager: command-line tools version and edition, the HarmonyOS SDK in use, the emulator architecture, and **Install from archive…** for full SDKs from the daily builds.
+- Native C++ and HarmonyOS App project templates (synced from the CLI); the Empty Ability template's ohosTest module now builds.
+- `oniro: build` and `oniro: check ArkTS` tasks that report to the Problems panel; `Ctrl+F5` runs the app.
+- Settings: `oniro.hdcPath`, `oniro.harmonyosSdkPath`, `oniro.sdkUrlBase`, `oniro.docsDir`, `oniro.emulatorBootTimeout`, `oniro.checkArktsOnSave`, `oniro.openHilogOnLaunch`.
+- Unit, activation and integration test suites (`npm test`, `npm run test:integration`).
+
+### Changed
+- Updated `@oniroproject/core` from 0.10.0 to 0.19.0, and the ArkTS language server packages to their latest 1.3.x.
+- The sidebar is grouped into Project, Device, Emulator, Tools and Doctor, and shows the target device and emulator health live.
+- **Run** uses the selected or single connected device and only starts the emulator when there is none; it waits for the emulator to finish booting instead of sleeping 10 s, and installs the HAP the build just produced.
+- Starting the emulator waits for boot to complete (`oniro.emulatorBootTimeout`) and keeps its log in the extension's storage.
+- A project with no `default` product builds its first product.
+- Create Project defaults to the newest installed SDK the installed command-line tools can build.
+- `oniro.emulatorUrl`, `oniro.cmdToolsUrlLinux` and `oniro.hapPath` default to empty, so core's defaults apply: the emulator matching the host's architecture, and installing whatever HAP the build produced.
+- The `oniro-debug` launch configuration runs Oniro: Run and no longer tries to start a debug adapter that does not exist.
+
+### Fixed
+- Installing on a project whose product is not `default` (or whose module is not `entry`): the `oniro.hapPath` default pinned `entry/build/default/...`, which kept core from finding the HAP the build produced.
+- Launching the app opened a new HiLog viewer tab each time; the viewer is now reused, and it reports when the log stream ends.
+- Build Configuration labels were white, unreadable on light themes.
+
 ## [0.6.1]
 
 ### Fixed
