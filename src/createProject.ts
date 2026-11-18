@@ -13,6 +13,7 @@ import {
     listTemplates,
 } from '@oniroproject/core';
 import { oniroLogChannel } from './utils/logger';
+import { dropScaffoldHapPath } from './utils/project';
 import { vscodeConfigProvider, vscodeLogger } from './adapters';
 
 type CreateProjectArgs = {
@@ -218,6 +219,10 @@ export function registerCreateProjectCommand(context: vscode.ExtensionContext): 
                             logger: vscodeLogger,
                         }),
                     );
+
+                    // createScaffold pins oniro.hapPath to the entry module's default HAP,
+                    // which would stop install from finding what the build produced.
+                    dropScaffoldHapPath(createdProjectDir);
 
                     panel.dispose();
                     await vscode.commands.executeCommand(

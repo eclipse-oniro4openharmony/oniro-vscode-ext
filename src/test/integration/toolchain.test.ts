@@ -31,8 +31,8 @@ const EXTENSION_ID = 'oniro.oniro-app-ide';
 /**
  * End-to-end checks of the extension against the real toolchain. They need the
  * fixture project (scripts/create-fixture.cjs), its SDK, the command-line tools,
- * java, and a connected device or the Oniro emulator. Device steps are skipped
- * when no device is connected.
+ * java, and the Oniro emulator running (or ONIRO_TEST_DEVICE_SERIAL naming a
+ * device to use). Device steps are skipped otherwise.
  */
 suite('toolchain (integration)', () => {
     const projectDir = vscode.workspace.workspaceFolders![0].uri.fsPath;
@@ -43,10 +43,14 @@ suite('toolchain (integration)', () => {
     suiteSetup(async () => {
         await vscode.extensions.getExtension(EXTENSION_ID)!.activate();
         original = fs.readFileSync(indexEts, 'utf8');
-        // Pin one target so hdc is never ambiguous, preferring the emulator so a
-        // physical device that happens to be plugged in is left alone.
+        // Device steps install, launch and crash an app, so they run only on the Oniro
+        // emulator, or on the device named by ONIRO_TEST_DEVICE_SERIAL: never on
+        // whatever physical device happens to be plugged in.
         const usable = (await listDevices(vscodeConfigProvider)).filter(isUsableDevice);
-        const target = usable.find((d) => d.serial.startsWith('127.0.0.1:')) ?? usable[0];
+        const wanted = process.env.ONIRO_TEST_DEVICE_SERIAL;
+        const target = wanted
+            ? usable.find((d) => d.serial === wanted)
+            : usable.find((d) => /^(127\.0\.0\.1|localhost):/.test(d.serial));
         haveDevice = !!target;
         if (target) { process.env.ONIRO_DEVICE_SERIAL = target.serial; }
     });
@@ -60,6 +64,14 @@ suite('toolchain (integration)', () => {
 
     test('the project is recognised', async () => {
         assert.ok(fs.existsSync(path.join(projectDir, 'build-profile.json5')));
+    });
+
+    test('a scaffold-generated oniro.hapPath does not pin the HAP', () => {
+        // The fixture comes from core's createScaffold, which writes this setting the
+        // way projects created by earlier extension versions have it.
+        const settings = JSON.parse(fs.readFileSync(path.join(projectDir, '.vscode/settings.json'), 'utf8'));
+        assert.strictEqual(settings['oniro.hapPath'], 'entry/build/default/outputs/default/entry-default-signed.hap');
+        assert.strictEqual(vscodeConfigProvider.get('hapPath', ''), '');
     });
 
     test('the ArkTS language server starts', async function () {

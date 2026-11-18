@@ -6,6 +6,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+### Fixed
+- Projects created with Create Project (in 0.7.0 and earlier) had `oniro.hapPath` pinned to `entry/build/default/outputs/default/entry-default-signed.hap` in their `.vscode/settings.json`, which made Install fail with "HAP file not found" whenever the build produced another HAP (an unsigned HarmonyOS build, another product or module). New projects no longer get the setting, and that generated value is ignored in existing projects so the HAP the build produced is installed. A path set by hand is still honoured.
+
 ## [0.7.0]
 
 ### Added
