@@ -6,9 +6,6 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-### Fixed
-- Projects created with Create Project (in 0.7.0 and earlier) had `oniro.hapPath` pinned to `entry/build/default/outputs/default/entry-default-signed.hap` in their `.vscode/settings.json`, which made Install fail with "HAP file not found" whenever the build produced another HAP (an unsigned HarmonyOS build, another product or module). New projects no longer get the setting, and that generated value is ignored in existing projects so the HAP the build produced is installed. A path set by hand is still honoured.
-
 ## [0.7.0]
 
 ### Added
@@ -41,6 +38,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Installing on a project whose product is not `default` (or whose module is not `entry`): the `oniro.hapPath` default pinned `entry/build/default/...`, which kept core from finding the HAP the build produced.
 - Launching the app opened a new HiLog viewer tab each time; the viewer is now reused, and it reports when the log stream ends.
 - Build Configuration labels were white, unreadable on light themes.
+- Install failed with "HAP file not found" whenever the build produced a HAP other than `entry/build/default/outputs/default/entry-default-signed.hap` (an unsigned HarmonyOS build, another product or module), because Create Project pinned that path as `oniro.hapPath` in the new project's `.vscode/settings.json`. New projects no longer get the setting, and in existing projects that generated value is ignored, so the HAP the build produced is installed. A path set by hand is still honoured.
 
 ## [0.6.1]
 
