@@ -5,6 +5,7 @@ import * as os from 'os';
 import {
     type TemplateOption,
     createScaffold,
+    getCmdToolsStatus,
     getOhosBaseSdkHome,
     getSupportedSdksForUi,
     isValidBundleName,
@@ -99,8 +100,13 @@ export function registerCreateProjectCommand(context: vscode.ExtensionContext): 
         const templateOptions = getTemplateOptions(context);
         const sdkOptions = getSdkOptions();
         const supportedApis = new Set(sdkOptions.map(s => s.api));
-        // Prefer the latest installed SDK; otherwise fall back to the latest available.
-        const defaultSdkApi = sdkOptions.find(s => s.installed)?.api ?? sdkOptions[0]?.api ?? 12;
+        // Prefer the newest installed SDK the command-line tools can build: hvigor
+        // rejects an SDK newer than the one the tools bundle (e.g. 6.1.1 tools, API 24,
+        // cannot build API 26). Otherwise the newest installed, then the newest known.
+        const toolsApi = Number(getCmdToolsStatus(vscodeConfigProvider).sdk?.apiVersion);
+        const installed = sdkOptions.filter(s => s.installed);
+        const buildable = Number.isFinite(toolsApi) ? installed.find(s => s.api <= toolsApi) : undefined;
+        const defaultSdkApi = buildable?.api ?? installed[0]?.api ?? sdkOptions[0]?.api ?? 12;
         const defaultTemplateId = templateOptions.find(t => t.id === 'EmptyAbility')?.id ?? templateOptions[0]?.id ?? 'EmptyAbility';
         const defaultTemplateModuleName = templateOptions.find(t => t.id === defaultTemplateId)?.defaultModuleName ?? 'entry';
 
@@ -173,7 +179,9 @@ export function registerCreateProjectCommand(context: vscode.ExtensionContext): 
                         return;
                     }
 
-                    if (!(await ensureSelectedSdkInstalled(args.sdkApi))) {
+                    // HarmonyOS templates build against the HarmonyOS SDK, not an OpenHarmony API folder.
+                    const harmonyOs = /harmonyos/i.test(args.templateId);
+                    if (!harmonyOs && !(await ensureSelectedSdkInstalled(args.sdkApi))) {
                         return;
                     }
 

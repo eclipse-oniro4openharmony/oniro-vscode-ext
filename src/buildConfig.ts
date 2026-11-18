@@ -2,27 +2,12 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { readJson5File } from '@oniroproject/core';
+import { OniroCommands } from './commandIds';
+import { buildWithProgress } from './build';
 import { oniroLogChannel } from './utils/logger';
-import { getWorkspaceRoot, runBuild } from './utils/buildHelpers';
-
-type BuildProfile = {
-	app?: {
-		products?: Array<{ name: string; signingConfig?: string }>;
-		buildModeSet?: Array<{ name: string }>;
-		signingConfigs?: Array<Record<string, unknown>>;
-	};
-	modules?: Array<{ name: string; srcPath?: string }>;
-};
+import { getProjectDir, loadBuildProfile } from './utils/project';
 
 type OhPackage = Record<string, unknown>;
-
-function loadBuildProfile(projectDir: string): BuildProfile {
-	const buildProfilePath = path.join(projectDir, 'build-profile.json5');
-	if (!fs.existsSync(buildProfilePath)) {
-		throw new Error('build-profile.json5 not found.');
-	}
-	return readJson5File<BuildProfile>(buildProfilePath);
-}
 
 function loadRootOhPackage(projectDir: string): OhPackage | undefined {
 	const ohPackagePath = path.join(projectDir, 'oh-package.json5');
@@ -32,8 +17,8 @@ function loadRootOhPackage(projectDir: string): OhPackage | undefined {
 	return readJson5File<OhPackage>(ohPackagePath);
 }
 
-function loadModuleOhPackage(projectDir: string, moduleName: string): OhPackage | undefined {
-	const ohPackagePath = path.join(projectDir, moduleName, 'oh-package.json5');
+function loadModuleOhPackage(projectDir: string, moduleName: string, srcPath?: string): OhPackage | undefined {
+	const ohPackagePath = path.join(projectDir, srcPath ?? moduleName, 'oh-package.json5');
 	if (!fs.existsSync(ohPackagePath)) {
 		return undefined;
 	}
@@ -53,10 +38,10 @@ function getBuildConfigHtml(context: vscode.ExtensionContext): string {
 }
 
 export function registerBuildConfigCommand(context: vscode.ExtensionContext): void {
-	const disposable = vscode.commands.registerCommand('oniro-ide.build', async () => {
+	const disposable = vscode.commands.registerCommand(OniroCommands.BUILD, async () => {
 		try {
 			oniroLogChannel.appendLine('[BuildConfig] Opening build configuration panel.');
-			const projectDir = getWorkspaceRoot();
+			const projectDir = getProjectDir();
 			const buildProfile = loadBuildProfile(projectDir);
 			const rootPackage = loadRootOhPackage(projectDir);
 
@@ -72,8 +57,10 @@ export function registerBuildConfigCommand(context: vscode.ExtensionContext): vo
 			const defaultBuildMode = buildModes[0] ?? 'debug';
 
 			const modulePackages: Record<string, OhPackage | undefined> = {};
-			for (const mod of modules) {
-				modulePackages[mod] = loadModuleOhPackage(projectDir, mod);
+			for (const mod of modulesDetails) {
+				if (mod.name) {
+					modulePackages[mod.name] = loadModuleOhPackage(projectDir, mod.name, mod.srcPath);
+				}
 			}
 
 			const panel = vscode.window.createWebviewPanel(
@@ -106,18 +93,12 @@ export function registerBuildConfigCommand(context: vscode.ExtensionContext): vo
 					});
 				}
 				if (message?.command === 'build') {
-					try {
-						await runBuild({
-							projectDir,
-							product: message?.data?.product,
-							module: message?.data?.module,
-							buildMode: message?.data?.buildMode,
-						});
-						vscode.window.showInformationMessage('Build complete.');
-					} catch (err) {
-						const errMsg = err instanceof Error ? err.message : String(err);
-						vscode.window.showErrorMessage(`Build failed: ${errMsg}`);
-					}
+					await buildWithProgress({
+						projectDir,
+						product: message?.data?.product,
+						module: message?.data?.module,
+						buildMode: message?.data?.buildMode,
+					});
 				}
 			}, undefined, context.subscriptions);
 		} catch (err) {

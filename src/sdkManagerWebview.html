@@ -101,6 +101,30 @@
             margin-right: 8px;
             vertical-align: middle;
         }
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 1.05em;
+            margin: 18px 0 0 0;
+        }
+        .section-head button, button.secondary {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .section-head button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+        .hint {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground, #888);
+            margin: 6px 0 0 0;
+        }
+        .hint a { color: var(--vscode-textLink-foreground); }
+        .sdk-list { padding: 0 !important; max-width: none !important; min-width: 0 !important; }
         .main-flex-container {
             display: flex;
             flex-direction: row;
@@ -111,14 +135,38 @@
             margin: 0 auto;
             padding: 0 12px 32px 12px;
         }
-        .sdk-list, .cmd-tools-section {
+        .sdk-column, .cmd-tools-section {
             flex: 1 1 0;
             min-width: 320px;
             max-width: 520px;
         }
         @media (max-width: 1100px) {
-            .main-flex-container { flex-direction: column; gap: 24px; align-items: center; }
-            .sdk-list, .cmd-tools-section { max-width: 520px; min-width: 0; width: 100%; }
+            .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 1.05em;
+            margin: 18px 0 0 0;
+        }
+        .section-head button, button.secondary {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .section-head button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+        .hint {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground, #888);
+            margin: 6px 0 0 0;
+        }
+        .hint a { color: var(--vscode-textLink-foreground); }
+        .sdk-list { padding: 0 !important; max-width: none !important; min-width: 0 !important; }
+        .main-flex-container { flex-direction: column; gap: 24px; align-items: center; }
+            .sdk-column, .cmd-tools-section { max-width: 520px; min-width: 0; width: 100%; }
         }
         @media (max-width: 600px) {
             .sdk-item { flex-direction: column; align-items: stretch; gap: 10px; }
@@ -129,14 +177,23 @@
 <body>
     <h2>Oniro SDK Manager</h2>
     <div class="main-flex-container">
-        <div class="sdk-list" id="sdk-list">
-            <!-- Will be populated by JavaScript -->
+        <div class="sdk-column">
+            <div class="section-head">
+                <span>OpenHarmony SDKs</span>
+                <button id="sdk-from-archive" class="secondary" title="Install a local SDK .tar.gz, such as an ohos-sdk-full archive from the OpenHarmony daily builds">Install from archive…</button>
+            </div>
+            <p class="hint">The full SDK (with system APIs) is not on the release mirror: download an <code>ohos-sdk-full</code> archive from the <a href="#" id="daily-builds">OpenHarmony daily builds</a> and install it from the archive.</p>
+            <div class="sdk-list" id="sdk-list">
+                <!-- Will be populated by JavaScript -->
+            </div>
         </div>
         <div class="cmd-tools-section">
+            <div class="section-head"><span>Tools</span></div>
             <div class="sdk-item">
                 <div class="sdk-info">
-                    <span class="sdk-version">OpenHarmony Command Line Tools</span>
+                    <span class="sdk-version">Command Line Tools</span>
                     <span class="sdk-status" id="cmd-tools-status">Checking...</span>
+                    <span class="sdk-api" id="cmd-tools-desc" style="display:none"></span>
                     <span class="sdk-path" id="cmd-tools-path" style="display:none"></span>
                 </div>
                 <div class="sdk-actions">
@@ -148,11 +205,20 @@
                 <div class="sdk-info">
                     <span class="sdk-version">Oniro Emulator</span>
                     <span class="sdk-status" id="emulator-status">Checking...</span>
+                    <span class="sdk-api" id="emulator-arch" style="display:none"></span>
                     <span class="sdk-path" id="emulator-path" style="display:none"></span>
                 </div>
                 <div class="sdk-actions">
                     <button id="emulator-install" style="display:none">Install</button>
                     <button id="emulator-remove" class="remove" style="display:none">Remove</button>
+                </div>
+            </div>
+            <div class="sdk-item" id="hmos-sdk" style="display:none">
+                <div class="sdk-info">
+                    <span class="sdk-version">HarmonyOS SDK</span>
+                    <span class="sdk-status" id="hmos-sdk-status"></span>
+                    <span class="sdk-path" id="hmos-sdk-path"></span>
+                    <span class="sdk-api">Comes with the HarmonyOS command-line tools or DevEco Studio; used for HarmonyOS projects.</span>
                 </div>
             </div>
         </div>
@@ -181,6 +247,16 @@
                     vscode.postMessage({ command: 'removeCmdTools' });
                 };
 
+                document.getElementById('sdk-from-archive').onclick = () => {
+                    vscode.postMessage({ command: 'installSdkFromArchive' });
+                };
+                document.getElementById('daily-builds').onclick = (e) => {
+                    e.preventDefault();
+                    if (this.dailyBuildsUrl) {
+                        vscode.postMessage({ command: 'openUrl', url: this.dailyBuildsUrl });
+                    }
+                };
+
                 // Emulator
                 document.getElementById('emulator-install').onclick = () => {
                     vscode.postMessage({ command: 'installEmulator' });
@@ -191,9 +267,25 @@
             }
 
             updateUI(state) {
+                this.dailyBuildsUrl = state.dailyBuildsUrl;
                 this.updateSDKList(state.sdks);
                 this.updateCmdTools(state.cmdTools);
                 this.updateEmulator(state.emulator);
+                this.updateHarmonyOs(state.harmonyOsSdk);
+            }
+
+            setText(id, text) {
+                const el = document.getElementById(id);
+                el.textContent = text || '';
+                el.style.display = text ? '' : 'none';
+            }
+
+            updateHarmonyOs(sdk) {
+                document.getElementById('hmos-sdk').style.display = sdk ? '' : 'none';
+                if (!sdk) { return; }
+                const name = sdk.displayName || 'HarmonyOS';
+                this.setText('hmos-sdk-status', `${name}${sdk.api ? ` (API ${sdk.api})` : ''}${sdk.source ? ` · from ${sdk.source}` : ''}`);
+                this.setText('hmos-sdk-path', `Path: ${sdk.path}`);
             }
 
             updateSDKList(sdks) {
@@ -218,7 +310,8 @@
             }
 
             updateCmdTools(cmdTools) {
-                document.getElementById('cmd-tools-status').textContent = cmdTools.status;
+                document.getElementById('cmd-tools-status').textContent = cmdTools.installed && cmdTools.flavour ? `Installed (${cmdTools.flavour} edition)` : cmdTools.status;
+                this.setText('cmd-tools-desc', cmdTools.description);
                 document.getElementById('cmd-tools-install').style.display = cmdTools.installed ? 'none' : '';
                 document.getElementById('cmd-tools-remove').style.display = cmdTools.installed ? '' : 'none';
 
@@ -233,6 +326,7 @@
 
             updateEmulator(emulator) {
                 document.getElementById('emulator-status').textContent = emulator.status;
+                this.setText('emulator-arch', emulator.arch ? `Architecture: ${emulator.arch}` : '');
                 document.getElementById('emulator-install').style.display = emulator.installed ? 'none' : '';
                 document.getElementById('emulator-remove').style.display = emulator.installed ? '' : 'none';
 

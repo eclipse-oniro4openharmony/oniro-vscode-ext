@@ -9,23 +9,32 @@ import {
     getCmdToolsStatus,
     getSupportedSdksForUi,
     getCmdToolsDownloadUrl,
-    downloadAndInstallSdk,
+    describeCmdTools,
+    describeReplacement,
+    getHarmonyOsSdkListing,
     installCmdTools,
+    installSdkFromArchive,
+    installedEmulatorArch,
+    OHOS_DAILY_BUILDS_URL,
     removeCmdTools,
     removeSdk,
     isEmulatorInstalled,
     installEmulator,
     removeEmulator,
 } from '@oniroproject/core';
-import { OniroCommands } from './OniroTreeDataProvider';
+import { OniroCommands } from './commandIds';
+import { installSdkWithProgress } from './sdkInstall';
+import { oniroLogChannel } from './utils/logger';
 import { vscodeConfigProvider, vscodeLogger, tokenToSignal } from './adapters';
 
 type SdkInfoWithPath = SdkInfo & { installPath?: string };
 
 interface SdkManagerState {
     sdks: SdkInfoWithPath[];
-    cmdTools: { installed: boolean; status: string; installPath: string };
-    emulator: { installed: boolean; status: string; installPath: string };
+    cmdTools: { installed: boolean; status: string; installPath: string; description?: string; flavour?: string };
+    emulator: { installed: boolean; status: string; installPath: string; arch?: string };
+    harmonyOsSdk: { displayName?: string; api?: string; path: string; source?: string } | null;
+    dailyBuildsUrl: string;
 }
 
 interface MessageHandler {
@@ -48,17 +57,30 @@ export function getAvailableSdks(): SdkInfoWithPath[] {
 
 function getCurrentState(): SdkManagerState {
     const cmdToolsStatus = getCmdToolsStatus(vscodeConfigProvider);
+    const emulatorInstalled = isEmulatorInstalled(vscodeConfigProvider);
+    let harmonyOsSdk: SdkManagerState['harmonyOsSdk'] = null;
+    try {
+        harmonyOsSdk = getHarmonyOsSdkListing(vscodeConfigProvider);
+    } catch {
+        harmonyOsSdk = null;
+    }
     return {
         sdks: getAvailableSdks(),
         cmdTools: {
-            ...cmdToolsStatus,
+            installed: cmdToolsStatus.installed,
+            status: cmdToolsStatus.status,
             installPath: getCmdToolsPath(vscodeConfigProvider),
+            description: cmdToolsStatus.installed ? describeCmdTools(cmdToolsStatus) : undefined,
+            flavour: cmdToolsStatus.flavour,
         },
         emulator: {
-            installed: isEmulatorInstalled(vscodeConfigProvider),
-            status: isEmulatorInstalled(vscodeConfigProvider) ? 'Installed' : 'Not installed',
+            installed: emulatorInstalled,
+            status: emulatorInstalled ? 'Installed' : 'Not installed',
             installPath: getEmulatorDir(vscodeConfigProvider),
+            arch: emulatorInstalled ? installedEmulatorArch(vscodeConfigProvider) : undefined,
         },
+        harmonyOsSdk,
+        dailyBuildsUrl: OHOS_DAILY_BUILDS_URL,
     };
 }
 
@@ -87,44 +109,55 @@ async function promptForCmdToolsZip(): Promise<string | undefined> {
 
 const messageHandlers: MessageHandler = {
     async downloadSdk(message, context) {
-        if (context.currentAbortController) {
-            context.currentAbortController.abort();
-        }
-        context.currentAbortController = new AbortController();
+        await installSdkWithProgress(String(message.version), String(message.api));
+        context.updateState();
+    },
 
-        try {
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Downloading and installing SDK ${message.version} (API ${message.api})`,
-                cancellable: true,
-            }, async (progress, token) => {
-                const bridge = tokenToSignal(token);
-                token.onCancellationRequested(() => context.currentAbortController?.abort());
-                try {
-                    await downloadAndInstallSdk({
-                        config: vscodeConfigProvider,
-                        version: message.version,
-                        api: message.api,
-                        progress,
-                        abortSignal: context.currentAbortController?.signal ?? bridge.signal,
-                        logger: vscodeLogger,
-                    });
-                } finally {
-                    bridge.dispose();
-                }
-            });
-
-            context.updateState();
-            const sdkInstallPath = path.join(getOhosBaseSdkHome(vscodeConfigProvider), String(message.api));
-            vscode.window.showInformationMessage(`SDK ${message.version} (API ${message.api}) installed to: ${sdkInstallPath}`);
-        } catch (err: any) {
-            if (err?.message === 'Download cancelled' || err?.name === 'CancelledError') {
-                vscode.window.showWarningMessage('SDK download cancelled.');
-            } else {
-                vscode.window.showErrorMessage(`Failed to install SDK: ${err.message}`);
+    async installSdkFromArchive(message, context) {
+        const uris = await vscode.window.showOpenDialog({
+            title: 'Install OpenHarmony SDK from archive',
+            canSelectMany: false,
+            openLabel: 'Install',
+            filters: { 'SDK archives': ['gz', 'tgz'] },
+        });
+        const archivePath = uris?.[0]?.fsPath;
+        if (!archivePath) { return; }
+        const install = (force: boolean) => vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Installing SDK from ${path.basename(archivePath)}`,
+            cancellable: true,
+        }, async (progress, token) => {
+            const bridge = tokenToSignal(token);
+            try {
+                return await installSdkFromArchive({ config: vscodeConfigProvider, archivePath, force, progress, abortSignal: bridge.signal, logger: vscodeLogger });
+            } finally {
+                bridge.dispose();
             }
-        } finally {
-            context.currentAbortController = undefined;
+        });
+        try {
+            let installed;
+            try {
+                installed = await install(false);
+            } catch (err: any) {
+                if (!/--force|already installed/i.test(String(err?.message))) { throw err; }
+                const choice = await vscode.window.showWarningMessage(`${String(err.message).replace(/;\s*pass --force[\s\S]*$/, '.')} Replace it?`, { modal: true }, 'Replace');
+                if (choice !== 'Replace') { return; }
+                installed = await install(true);
+            }
+            context.updateState();
+            vscode.window.showInformationMessage(`SDK ${installed.version} (API ${installed.api}) installed to ${installed.dir}.`);
+        } catch (err: any) {
+            if (err?.name === 'CancelledError') {
+                vscode.window.showWarningMessage('SDK installation cancelled.');
+            } else {
+                vscode.window.showErrorMessage(`Failed to install the SDK archive: ${err?.message ?? err}`);
+            }
+        }
+    },
+
+    async openUrl(message) {
+        if (typeof message.url === 'string' && /^https:\/\//.test(message.url)) {
+            await vscode.env.openExternal(vscode.Uri.parse(message.url));
         }
     },
 
@@ -169,13 +202,19 @@ const messageHandlers: MessageHandler = {
                 const bridge = tokenToSignal(token);
                 token.onCancellationRequested(() => context.currentAbortController?.abort());
                 try {
-                    await installCmdTools({
+                    const result = await installCmdTools({
                         config: vscodeConfigProvider,
                         progress,
                         abortSignal: context.currentAbortController?.signal ?? bridge.signal,
                         logger: vscodeLogger,
                         localZipPath,
                     });
+                    if (result.previous) {
+                        for (const line of describeReplacement(result.previous, result.installed)) {
+                            oniroLogChannel.appendLine(`[cmdtools] ${line}`);
+                        }
+                    }
+                    oniroLogChannel.appendLine(`[cmdtools] Installed ${describeCmdTools(result.installed)}.`);
                 } finally {
                     bridge.dispose();
                 }
@@ -294,7 +333,7 @@ export function registerSdkManagerCommand(context: vscode.ExtensionContext) {
                 if (handler) {
                     await handler(message, managerContext);
                 } else {
-                    console.warn(`Unknown command: ${message.command}`);
+                    oniroLogChannel.appendLine(`[SDK Manager] Unknown message: ${message.command}`);
                 }
             },
             undefined,

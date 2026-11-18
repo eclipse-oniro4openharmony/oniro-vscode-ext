@@ -1,0 +1,6 @@
+{
+  "id": "HarmonyOSApp",
+  "label": "HarmonyOS App",
+  "description": "Empty HarmonyOS ability. Builds against the HarmonyOS SDK and must be signed with `oniro-app sign --harmonyos`, which needs a Huawei developer account.",
+  "defaultModuleName": "entry"
+}

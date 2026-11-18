@@ -1,8 +1,8 @@
 {
   "name": "oniro-app-ide",
   "displayName": "Oniro App IDE",
-  "description": " lightweight, integrated development environment as a Visual Studio Code Extension tailored for Oniro/OpenHarmony application development",
-  "version": "0.6.1",
+  "description": "Lightweight IDE for Oniro/OpenHarmony and HarmonyOS app development: build, sign, run on device or emulator, ArkTS checks, tests, crash analysis, logs and SDK management.",
+  "version": "0.7.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/eclipse-oniro4openharmony/oniro-vscode-ext.git"
@@ -15,69 +15,181 @@
     "vscode": "^1.100.0"
   },
   "categories": [
+    "Programming Languages",
+    "Linters",
+    "Testing",
     "Other"
   ],
   "activationEvents": [
+    "workspaceContains:build-profile.json5",
     "onView:oniroMainView",
-    "onCommand:oniro-ide.createProject",
-    "onCommand:oniro-ide.openSdkManager",
-    "onCommand:oniro-ide.runAll",
-    "onCommand:oniro-ide.build",
-    "onCommand:oniro-ide.sign",
-    "onCommand:oniro-ide.startEmulator",
-    "onCommand:oniro-ide.stopEmulator",
-    "onCommand:oniro-ide.connectEmulator",
-    "onCommand:oniro-ide.installApp",
-    "onCommand:oniro-ide.launchApp",
-    "onCommand:oniro-ide.showHilogViewer",
     "onLanguage:ets"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "oniro-ide.createProject",
-        "title": "Oniro: Create Project"
+        "command": "oniro-ide.runAll",
+        "title": "Run (Build, Install, Launch)",
+        "category": "Oniro",
+        "icon": "$(play)"
       },
       {
-        "command": "oniro-ide.openSdkManager",
-        "title": "Oniro: Open SDK Manager"
-      },
-      {
-        "command": "oniro-ide.startEmulator",
-        "title": "Oniro: Start Emulator"
-      },
-      {
-        "command": "oniro-ide.stopEmulator",
-        "title": "Oniro: Stop Emulator"
-      },
-      {
-        "command": "oniro-ide.connectEmulator",
-        "title": "Oniro: Connect Emulator"
-      },
-      {
-        "command": "oniro-ide.installApp",
-        "title": "Oniro: Install App"
-      },
-      {
-        "command": "oniro-ide.launchApp",
-        "title": "Oniro: Launch App"
+        "command": "oniro-ide.quickBuild",
+        "title": "Build",
+        "category": "Oniro",
+        "icon": "$(package)"
       },
       {
         "command": "oniro-ide.build",
-        "title": "Oniro: Build App"
+        "title": "Build…",
+        "category": "Oniro"
       },
       {
         "command": "oniro-ide.sign",
-        "title": "Oniro: Sign App"
+        "title": "Sign Project",
+        "category": "Oniro",
+        "icon": "$(key)"
       },
       {
-        "command": "oniro-ide.runAll",
-        "title": "Oniro: Run All (Emulator, Build, Install, Launch)"
+        "command": "oniro-ide.signHap",
+        "title": "Sign HAP…",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.verifyHap",
+        "title": "Verify HAP Signature…",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.harmonyosLogin",
+        "title": "Sign In to Huawei Developer Account",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.harmonyosLogout",
+        "title": "Sign Out of Huawei Developer Account",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.checkArkts",
+        "title": "Check ArkTS",
+        "category": "Oniro",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "oniro-ide.fixArkts",
+        "title": "Fix ArkTS Problems",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.startEmulator",
+        "title": "Start Emulator",
+        "category": "Oniro",
+        "icon": "$(vm-running)"
+      },
+      {
+        "command": "oniro-ide.stopEmulator",
+        "title": "Stop Emulator",
+        "category": "Oniro",
+        "icon": "$(vm-outline)"
+      },
+      {
+        "command": "oniro-ide.connectEmulator",
+        "title": "Connect Emulator",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.selectDevice",
+        "title": "Select Target Device",
+        "category": "Oniro",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "oniro-ide.installApp",
+        "title": "Install App",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.launchApp",
+        "title": "Launch App",
+        "category": "Oniro",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "oniro-ide.stopApp",
+        "title": "Stop App",
+        "category": "Oniro",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "oniro-ide.uninstallApp",
+        "title": "Uninstall App",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.screenshot",
+        "title": "Take Device Screenshot",
+        "category": "Oniro",
+        "icon": "$(device-camera)"
+      },
+      {
+        "command": "oniro-ide.showLastCrash",
+        "title": "Show Last Crash",
+        "category": "Oniro",
+        "icon": "$(bug)"
+      },
+      {
+        "command": "oniro-ide.createProject",
+        "title": "Create Project",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.openSdkManager",
+        "title": "Open SDK Manager",
+        "category": "Oniro",
+        "icon": "$(library)"
       },
       {
         "command": "oniro-ide.showHilogViewer",
-        "title": "Oniro: Show HiLog Viewer"
+        "title": "Show HiLog Viewer",
+        "category": "Oniro",
+        "icon": "$(output)"
+      },
+      {
+        "command": "oniro-ide.runDoctor",
+        "title": "Run Doctor",
+        "category": "Oniro",
+        "icon": "$(heart)"
+      },
+      {
+        "command": "oniro-ide.searchApi",
+        "title": "Search SDK API",
+        "category": "Oniro",
+        "icon": "$(symbol-method)"
+      },
+      {
+        "command": "oniro-ide.searchDocs",
+        "title": "Search OpenHarmony Docs",
+        "category": "Oniro",
+        "icon": "$(book)"
+      },
+      {
+        "command": "oniro-ide.syncDocs",
+        "title": "Download/Update OpenHarmony Docs",
+        "category": "Oniro"
+      },
+      {
+        "command": "oniro-ide.refreshTreeView",
+        "title": "Refresh",
+        "category": "Oniro",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "oniro-ide.showLog",
+        "title": "Show Log",
+        "category": "Oniro",
+        "icon": "$(output)"
       }
     ],
     "taskDefinitions": [
@@ -89,7 +201,23 @@
         "properties": {
           "command": {
             "type": "string",
-            "description": "The Oniro tool command to execute"
+            "enum": [
+              "build",
+              "checkArkts"
+            ],
+            "description": "What to run: `build` (hvigor through Oniro, errors to the Problems panel) or `checkArkts`."
+          },
+          "product": {
+            "type": "string",
+            "description": "hvigor product to build (build only)."
+          },
+          "module": {
+            "type": "string",
+            "description": "Module to build (build only)."
+          },
+          "buildMode": {
+            "type": "string",
+            "description": "hvigor build mode, e.g. debug or release (build only)."
           }
         }
       }
@@ -97,20 +225,27 @@
     "debuggers": [
       {
         "type": "oniro-debug",
-        "label": "Oniro Debug",
-        "program": "./out/extension.js",
-        "runtime": "node",
+        "label": "Oniro: Run on Device",
         "configurationAttributes": {
-          "oniro-debug": {
-            "properties": {},
-            "required": []
+          "launch": {
+            "properties": {}
           }
         },
         "initialConfigurations": [
           {
-            "name": "Launch Oniro App",
+            "name": "Run Oniro App",
             "type": "oniro-debug",
             "request": "launch"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Oniro: Run on Device",
+            "body": {
+              "name": "Run Oniro App",
+              "type": "oniro-debug",
+              "request": "launch"
+            }
           }
         ]
       }
@@ -135,7 +270,7 @@
     },
     "configuration": {
       "type": "object",
-      "title": "Oniro IDE Configuration",
+      "title": "Oniro",
       "properties": {
         "oniro.sdkRootDir": {
           "type": "string",
@@ -149,8 +284,8 @@
         },
         "oniro.cmdToolsUrlLinux": {
           "type": "string",
-          "default": "https://repo.huaweicloud.com/harmonyos/ohpm/5.1.0/commandline-tools-linux-x64-5.1.0.840.zip",
-          "description": "Download URL for OpenHarmony command-line tools on Linux."
+          "default": "",
+          "description": "Download URL for the command-line tools on Linux. Leave empty for the Oniro default (the public 5.1.0 OpenHarmony build)."
         },
         "oniro.cmdToolsUrlWindows": {
           "type": "string",
@@ -169,18 +304,54 @@
         },
         "oniro.emulatorUrl": {
           "type": "string",
-          "default": "https://github.com/eclipse-oniro4openharmony/device_board_oniro/releases/latest/download/oniro_emulator.zip",
-          "description": "Download URL for the Oniro emulator archive."
+          "default": "",
+          "description": "Download URL for the Oniro emulator archive. Leave empty to get the latest release for this machine: arm64 on Apple Silicon and arm64 Linux, x86_64 elsewhere."
         },
         "oniro.hapPath": {
           "type": "string",
-          "default": "entry/build/default/outputs/default/entry-default-signed.hap",
-          "description": "Relative path to the signed .hap file from the workspace directory."
+          "default": "",
+          "description": "HAP to install, relative to the project folder. Leave empty to install what the last build produced (the signed HAP of the entry module, else the newest built HAP)."
         },
         "oniro.tmpDir": {
           "type": "string",
           "default": "",
           "description": "Directory used for temporary files while downloading and extracting the SDK, command-line tools, and emulator. Leave empty to use a .oniro-tmp folder next to the install target. Set this when that filesystem is short on space, for example when the install target lives on a small partition."
+        },
+        "oniro.hdcPath": {
+          "type": "string",
+          "default": "",
+          "description": "hdc binary to use. Leave empty to use the one in the command-line tools or the SDK."
+        },
+        "oniro.harmonyosSdkPath": {
+          "type": "string",
+          "default": "",
+          "description": "HarmonyOS SDK (a DevEco Studio or command-line-tools install root, or its `sdk` folder). Leave empty to find DevEco Studio or HarmonyOS command-line tools automatically."
+        },
+        "oniro.sdkUrlBase": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL of the OpenHarmony SDK mirror. Leave empty for the Huawei Cloud mirror."
+        },
+        "oniro.docsDir": {
+          "type": "string",
+          "default": "",
+          "description": "Where the OpenHarmony docs are downloaded for Search Docs. Leave empty for `<sdkRootDir>/docs`."
+        },
+        "oniro.emulatorBootTimeout": {
+          "type": "number",
+          "default": 240,
+          "minimum": 10,
+          "description": "Seconds to wait for the emulator to finish booting before giving up."
+        },
+        "oniro.checkArktsOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run the ArkTS checker on each saved .ets file and show its findings in the Problems panel."
+        },
+        "oniro.openHilogOnLaunch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the HiLog viewer on the app process after launching it."
         },
         "ets.linterVersion": {
           "type": "string",
@@ -220,6 +391,130 @@
         "fileMatch": "code-linter.json5",
         "url": "./schemas/code-linter.schema.json"
       }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "oniro-ide.build",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.checkArkts",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.fixArkts",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.installApp",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.launchApp",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.quickBuild",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.runAll",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.showLastCrash",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.sign",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.stopApp",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.uninstallApp",
+          "when": "oniro.isProject"
+        },
+        {
+          "command": "oniro-ide.refreshTreeView",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "oniro-ide.runAll",
+          "when": "view == oniroMainView && oniro.isProject",
+          "group": "navigation@1"
+        },
+        {
+          "command": "oniro-ide.selectDevice",
+          "when": "view == oniroMainView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "oniro-ide.refreshTreeView",
+          "when": "view == oniroMainView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "oniro-ide.runDoctor",
+          "when": "view == oniroMainView",
+          "group": "more@1"
+        },
+        {
+          "command": "oniro-ide.showLog",
+          "when": "view == oniroMainView",
+          "group": "more@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "oniro-ide.signHap",
+          "when": "resourceExtname == .hap",
+          "group": "oniro@1"
+        },
+        {
+          "command": "oniro-ide.verifyHap",
+          "when": "resourceExtname == .hap",
+          "group": "oniro@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "oniro-ide.searchApi",
+          "when": "editorLangId == ets",
+          "group": "oniro@1"
+        },
+        {
+          "command": "oniro-ide.searchDocs",
+          "when": "editorLangId == ets",
+          "group": "oniro@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "oniro-ide.runAll",
+          "when": "editorLangId == ets && oniro.isProject",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "oniro-ide.runAll",
+        "key": "ctrl+f5",
+        "mac": "cmd+f5",
+        "when": "oniro.isProject && !inDebugMode"
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "oniroMainView",
+        "contents": "Open an OpenHarmony project, or create one.\n[Create Project](command:oniro-ide.createProject)\n[Open SDK Manager](command:oniro-ide.openSdkManager)"
+      }
     ]
   },
   "scripts": {
@@ -229,10 +524,11 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test",
+    "test": "vscode-test --label unit",
     "package": "vsce package",
     "publish:vscode": "vsce publish",
-    "publish:openvsx": "ovsx publish"
+    "publish:openvsx": "ovsx publish",
+    "test:integration": "node scripts/create-fixture.cjs && vscode-test --label integration"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -248,10 +544,19 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@arkts/language-plugin": "^1.3.3",
-    "@arkts/language-server": "^1.3.8",
-    "@arkts/language-service": "^1.3.8",
-    "@oniroproject/core": "^0.10.0",
+    "@arkts/language-plugin": "^1.3.10",
+    "@arkts/language-server": "^1.3.10",
+    "@arkts/language-service": "^1.3.9",
+    "@oniroproject/core": "^0.19.0",
     "vscode-languageclient": "^9.0.1"
-  }
+  },
+  "keywords": [
+    "oniro",
+    "openharmony",
+    "harmonyos",
+    "arkts",
+    "ets",
+    "hvigor",
+    "hdc"
+  ]
 }

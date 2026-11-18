@@ -1,0 +1,6 @@
+{
+  "id": "NativeCpp",
+  "label": "Native C++",
+  "description": "OpenHarmony app (ArkTS + Native C++ via N-API) with a CMake-built native library.",
+  "defaultModuleName": "entry"
+}

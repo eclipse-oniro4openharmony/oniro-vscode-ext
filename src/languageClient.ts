@@ -72,3 +72,8 @@ export function stopLanguageClient(): Thenable<void> | undefined {
     }
     return client.stop();
 }
+
+/** @internal for the integration tests. */
+export function languageClient(): LanguageClient | undefined {
+    return client;
+}
