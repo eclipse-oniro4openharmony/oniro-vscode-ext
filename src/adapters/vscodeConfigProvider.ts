@@ -12,7 +12,7 @@ export const vscodeConfigProvider: ConfigProvider = {
             value = value.replace(/\$\{userHome\}/g, os.homedir()) as T;
         }
 
-        // Projects created before 0.7.1 carry a generated hapPath in their workspace
+        // Projects created by earlier versions carry a generated hapPath in their workspace
         // settings; honouring it would stop core from finding the HAP the build produced.
         if (key === 'hapPath' && isScaffoldHapPath(value)) {
             return fallback;
